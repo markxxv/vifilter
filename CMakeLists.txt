@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(ViFilter VERSION 0.2.0 LANGUAGES C CXX)
+project(ViFilter VERSION 0.3.0 LANGUAGES C CXX)
 
 include(CTest)
 include(FetchContent)
@@ -35,6 +35,7 @@ juce_add_plugin(ViFilter
 )
 
 target_sources(ViFilter PRIVATE
+    Source/AnalogDSP.h
     Source/FilterDSP.h
     Source/PluginProcessor.h
     Source/PluginProcessor.cpp
@@ -58,4 +59,18 @@ if(BUILD_TESTING)
     target_include_directories(ViFilterDSPTests PRIVATE Source)
     target_compile_features(ViFilterDSPTests PRIVATE cxx_std_17)
     add_test(NAME ViFilterDSPTests COMMAND ViFilterDSPTests)
+
+    add_executable(ViFilterAnalogTests Tests/AnalogDSPTests.cpp)
+    target_include_directories(ViFilterAnalogTests PRIVATE Source)
+    target_compile_features(ViFilterAnalogTests PRIVATE cxx_std_17)
+    add_test(NAME ViFilterAnalogTests COMMAND ViFilterAnalogTests)
+
+    add_executable(ViFilterOversamplingTests Tests/OversamplingTests.cpp)
+    target_include_directories(ViFilterOversamplingTests PRIVATE Source)
+    target_link_libraries(ViFilterOversamplingTests PRIVATE
+        juce::juce_dsp
+        juce::juce_recommended_config_flags
+    )
+    target_compile_definitions(ViFilterOversamplingTests PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+    add_test(NAME ViFilterOversamplingTests COMMAND ViFilterOversamplingTests)
 endif()
