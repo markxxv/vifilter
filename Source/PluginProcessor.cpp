@@ -39,6 +39,33 @@ ViFilterProcessor::ViFilterProcessor()
              && resonanceParameter != nullptr && modeParameter != nullptr
              && driveParameter != nullptr && characterParameter != nullptr
              && oversamplingParameter != nullptr);
+
+    for (const auto& spec : vi::presets::specs)
+        parameters.addParameterListener (spec.id, this);
+}
+
+ViFilterProcessor::~ViFilterProcessor()
+{
+    for (const auto& spec : vi::presets::specs)
+        parameters.removeParameterListener (spec.id, this);
+}
+
+void ViFilterProcessor::parameterChanged (const juce::String& parameterID, float newValue)
+{
+    const auto current = selectedProgram.load (std::memory_order_relaxed);
+    if (current == 0)
+        return;
+
+    const auto& preset = vi::presets::factory[static_cast<size_t> (current - 1)];
+    for (size_t i = 0; i < vi::presets::specs.size(); ++i)
+    {
+        if (parameterID == vi::presets::specs[i].id)
+        {
+            if (std::abs (newValue - preset.values[i]) > 0.0011f)
+                selectedProgram.store (0, std::memory_order_relaxed);
+            return;
+        }
+    }
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout
@@ -305,22 +332,57 @@ bool ViFilterProcessor::acceptsMidi() const { return false; }
 bool ViFilterProcessor::producesMidi() const { return false; }
 bool ViFilterProcessor::isMidiEffect() const { return false; }
 double ViFilterProcessor::getTailLengthSeconds() const { return 0.0; }
-int ViFilterProcessor::getNumPrograms() { return 1; }
-int ViFilterProcessor::getCurrentProgram() { return 0; }
-void ViFilterProcessor::setCurrentProgram (int index) { juce::ignoreUnused (index); }
+int ViFilterProcessor::getNumPrograms()
+{
+    return 1 + static_cast<int> (vi::presets::factory.size());
+}
+
+int ViFilterProcessor::getCurrentProgram()
+{
+    return selectedProgram.load (std::memory_order_relaxed);
+}
+
+void ViFilterProcessor::setCurrentProgram (int index)
+{
+    if (index < 0 || index >= getNumPrograms())
+        return;
+
+    // "Custom" just deselects the factory program; it does not erase parameters.
+    selectedProgram.store (index, std::memory_order_relaxed);
+    if (index == 0)
+        return;
+
+    const auto& chosen = vi::presets::factory[static_cast<size_t> (index - 1)];
+    for (size_t i = 0; i < vi::presets::specs.size(); ++i)
+    {
+        if (auto* parameter = parameters.getParameter (vi::presets::specs[i].id))
+        {
+            const auto value = parameter->convertTo0to1 (chosen.values[i]);
+            if (std::abs (parameter->getValue() - value) > 1.0e-6f)
+                parameter->setValueNotifyingHost (value);
+        }
+    }
+}
+
 const juce::String ViFilterProcessor::getProgramName (int index)
 {
-    juce::ignoreUnused (index);
+    if (index == 0)
+        return "Custom";
+    if (index > 0 && index < getNumPrograms())
+        return vi::presets::factory[static_cast<size_t> (index - 1)].name;
     return {};
 }
+
 void ViFilterProcessor::changeProgramName (int index, const juce::String& name)
 {
+    // Factory programs are immutable; user presets live in separate files.
     juce::ignoreUnused (index, name);
 }
 
 void ViFilterProcessor::getStateInformation (juce::MemoryBlock& destination)
 {
-    if (const auto xml = parameters.copyState().createXml())
+    if (const auto xml = vi::presets::makeSessionXml (
+            parameters.copyState(), getCurrentProgram()))
         copyXmlToBinary (*xml, destination);
 }
 
@@ -328,10 +390,38 @@ void ViFilterProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     if (const auto xml = getXmlFromBinary (data, sizeInBytes))
     {
-        const auto state = juce::ValueTree::fromXml (*xml);
-        if (state.isValid() && state.hasType (parameters.state.getType()))
-            parameters.replaceState (state);
+        juce::ValueTree restored;
+        int program = 0;
+        if (vi::presets::decodeXml (*xml, restored, program).wasOk())
+        {
+            parameters.replaceState (restored);
+            selectedProgram.store (program, std::memory_order_relaxed);
+        }
     }
+}
+
+juce::Result ViFilterProcessor::saveUserPreset (const juce::String& name,
+                                                juce::File* savedFile)
+{
+    return vi::presets::saveFile (
+        parameters.copyState(), name, vi::presets::userDirectory(), savedFile);
+}
+
+juce::Result ViFilterProcessor::loadUserPreset (const juce::File& file)
+{
+    juce::ValueTree restored;
+    const auto result = vi::presets::loadFile (file, restored);
+    if (result.wasOk())
+    {
+        parameters.replaceState (restored);
+        selectedProgram.store (0, std::memory_order_relaxed);
+    }
+    return result;
+}
+
+juce::Array<juce::File> ViFilterProcessor::listUserPresets() const
+{
+    return vi::presets::listFiles (vi::presets::userDirectory());
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

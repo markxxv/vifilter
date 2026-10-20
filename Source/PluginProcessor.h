@@ -2,6 +2,7 @@
 
 #include "AnalogDSP.h"
 #include "FilterDSP.h"
+#include "PresetEngine.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
@@ -9,10 +10,12 @@
 #include <atomic>
 #include <vector>
 
-class ViFilterProcessor final : public juce::AudioProcessor
+class ViFilterProcessor final : public juce::AudioProcessor,
+                                private juce::AudioProcessorValueTreeState::Listener
 {
 public:
     ViFilterProcessor();
+    ~ViFilterProcessor() override;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -37,8 +40,16 @@ public:
     void getStateInformation (juce::MemoryBlock& destination) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    // Model-only API for the final UI: file operations are never called by processBlock.
+    juce::Result saveUserPreset (const juce::String& name, juce::File* savedFile = nullptr);
+    juce::Result loadUserPreset (const juce::File& file);
+    juce::Array<juce::File> listUserPresets() const;
+
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    void parameterChanged (const juce::String& parameterID, float newValue) override;
+
+    std::atomic<int> selectedProgram { 0 }; // 0 = Custom, 1..N = factory bank.
     void renderSaturationPath (int quality, const juce::AudioBuffer<float>& source,
                                int start, int numSamples, int channels,
                                juce::AudioBuffer<float>& destination) noexcept;
