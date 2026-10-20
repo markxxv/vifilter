@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "PluginEditor.h"
 
 #include <algorithm>
 #include <cmath>
@@ -12,6 +13,8 @@ constexpr auto modeId = "filter_mode";
 constexpr auto driveId = "drive";
 constexpr auto characterId = "analog_character";
 constexpr auto oversamplingId = "oversampling";
+constexpr auto inputTrimId = "input_trim";
+constexpr auto mixId = "mix";
 constexpr double smoothingSeconds = 0.02;
 constexpr double qualityFadeSeconds = 0.04;
 
@@ -25,7 +28,7 @@ ViFilterProcessor::ViFilterProcessor()
     : AudioProcessor (BusesProperties()
           .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
           .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-      parameters (*this, nullptr, "ViFilterParameters", createParameterLayout())
+      parameters (*this, &parameterUndo, "ViFilterParameters", createParameterLayout())
 {
     outputGainParameter = parameters.getRawParameterValue (outputGainId);
     cutoffParameter = parameters.getRawParameterValue (cutoffId);
@@ -34,11 +37,14 @@ ViFilterProcessor::ViFilterProcessor()
     driveParameter = parameters.getRawParameterValue (driveId);
     characterParameter = parameters.getRawParameterValue (characterId);
     oversamplingParameter = parameters.getRawParameterValue (oversamplingId);
+    inputTrimParameter = parameters.getRawParameterValue (inputTrimId);
+    mixParameter = parameters.getRawParameterValue (mixId);
 
     jassert (outputGainParameter != nullptr && cutoffParameter != nullptr
              && resonanceParameter != nullptr && modeParameter != nullptr
              && driveParameter != nullptr && characterParameter != nullptr
-             && oversamplingParameter != nullptr);
+             && oversamplingParameter != nullptr && inputTrimParameter != nullptr
+             && mixParameter != nullptr);
 
     for (const auto& spec : vi::presets::specs)
         parameters.addParameterListener (spec.id, this);
@@ -103,6 +109,16 @@ ViFilterProcessor::createParameterLayout()
         juce::AudioParameterChoiceAttributes().withAutomatable (false)));
 
     layout.add (std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID { inputTrimId, 1 }, "Input Trim",
+        juce::NormalisableRange<float> { -24.0f, 24.0f, 0.1f }, 0.0f,
+        juce::AudioParameterFloatAttributes().withLabel ("dB")));
+
+    layout.add (std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID { mixId, 1 }, "Mix",
+        juce::NormalisableRange<float> { 0.0f, 100.0f, 0.1f }, 100.0f,
+        juce::AudioParameterFloatAttributes().withLabel ("%")));
+
+    layout.add (std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { outputGainId, 1 }, "Output Gain",
         juce::NormalisableRange<float> { -24.0f, 24.0f, 0.1f }, 0.0f,
         juce::AudioParameterFloatAttributes().withLabel ("dB")));
@@ -118,6 +134,10 @@ void ViFilterProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
     for (auto& scratch : pathBuffers)
         scratch.setSize (2, maxChunkSize, false, false, true);
+    dryBuffer.setSize (2, maxChunkSize, false, false, true);
+    for (auto& delay : dryAlignment)
+        delay.reset();
+    analysisFifo.reset();
     driveSamples.resize (static_cast<size_t> (maxChunkSize));
     characterSamples.resize (static_cast<size_t> (maxChunkSize));
 
@@ -139,6 +159,8 @@ void ViFilterProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     resonance.reset (sampleRate, smoothingSeconds);
     outputGain.reset (sampleRate, smoothingSeconds);
     driveDb.reset (sampleRate, smoothingSeconds);
+    inputTrim.reset (sampleRate, smoothingSeconds);
+    dryWet.reset (sampleRate, smoothingSeconds);
     for (auto& weight : modeWeights)
         weight.reset (sampleRate, smoothingSeconds);
     for (auto& weight : characterWeights)
@@ -149,6 +171,9 @@ void ViFilterProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     outputGain.setCurrentAndTargetValue (juce::Decibels::decibelsToGain (
         outputGainParameter->load (std::memory_order_relaxed)));
     driveDb.setCurrentAndTargetValue (driveParameter->load (std::memory_order_relaxed));
+    inputTrim.setCurrentAndTargetValue (juce::Decibels::decibelsToGain (
+        inputTrimParameter->load (std::memory_order_relaxed)));
+    dryWet.setCurrentAndTargetValue (mixParameter->load (std::memory_order_relaxed) * 0.01f);
     lastDriveValue = -1.0f;
     lastSaturation = {};
 
@@ -253,6 +278,9 @@ void ViFilterProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     outputGain.setTargetValue (juce::Decibels::decibelsToGain (
         outputGainParameter->load (std::memory_order_relaxed)));
     driveDb.setTargetValue (driveParameter->load (std::memory_order_relaxed));
+    inputTrim.setTargetValue (juce::Decibels::decibelsToGain (
+        inputTrimParameter->load (std::memory_order_relaxed)));
+    dryWet.setTargetValue (mixParameter->load (std::memory_order_relaxed) * 0.01f);
 
     const auto mode = choice (modeParameter, 2);
     const auto character = choice (characterParameter, 2);
@@ -286,6 +314,7 @@ void ViFilterProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             if (moving)
                 coefficients = vi::makeCoefficients (getSampleRate(), std::exp (cutoffLog), res);
 
+            const auto trim = inputTrim.getNextValue();
             const auto low = modeWeights[0].getNextValue();
             const auto high = modeWeights[1].getNextValue();
             const auto band = modeWeights[2].getNextValue();
@@ -302,7 +331,9 @@ void ViFilterProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
             for (int channel = 0; channel < inputChannels; ++channel)
             {
-                const auto x = static_cast<double> (channels[channel][start + i]);
+                const auto x = static_cast<double> (channels[channel][start + i]) * trim;
+                dryBuffer.setSample (channel, i, dryAlignment[static_cast<size_t> (channel)]
+                                                         .process (static_cast<float> (x), alignmentSamples[0]));
                 const auto filtered = filters[static_cast<size_t> (channel)].process (x, coefficients);
                 channels[channel][start + i] = static_cast<float> (
                     low * filtered.low + high * filtered.high + band * filtered.band);
@@ -323,18 +354,30 @@ void ViFilterProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             if (qualityFadeRemaining > 0)
                 --qualityFadeRemaining;
             const auto gain = outputGain.getNextValue();
+            const auto wet = dryWet.getNextValue();
             for (int channel = 0; channel < inputChannels; ++channel)
             {
                 const auto oldSignal = pathBuffers[0].getSample (channel, i);
                 const auto newSignal = fading ? pathBuffers[1].getSample (channel, i) : oldSignal;
-                channels[channel][start + i] = ((1.0f - blend) * oldSignal + blend * newSignal) * gain;
+                const auto effect = (1.0f - blend) * oldSignal + blend * newSignal;
+                const auto dry = dryBuffer.getSample (channel, i);
+                channels[channel][start + i] = ((1.0f - wet) * dry + wet * effect) * gain;
             }
+            // Single-producer FIFO: the editor reads this only on its message thread.
+            int w1 = 0, n1 = 0, w2 = 0, n2 = 0;
+            analysisFifo.prepareToWrite (1, w1, n1, w2, n2);
+            if (n1 > 0)
+                analysisRing[static_cast<size_t> (w1)] = channels[0][start + i];
+            analysisFifo.finishedWrite (n1);
         }
     }
 }
 
-juce::AudioProcessorEditor* ViFilterProcessor::createEditor() { return nullptr; }
-bool ViFilterProcessor::hasEditor() const { return false; }
+juce::AudioProcessorEditor* ViFilterProcessor::createEditor()
+{
+    return new ViFilterEditor (*this);
+}
+bool ViFilterProcessor::hasEditor() const { return true; }
 const juce::String ViFilterProcessor::getName() const { return JucePlugin_Name; }
 bool ViFilterProcessor::acceptsMidi() const { return false; }
 bool ViFilterProcessor::producesMidi() const { return false; }
@@ -435,6 +478,21 @@ juce::Result ViFilterProcessor::loadUserPreset (const juce::File& file)
 juce::Array<juce::File> ViFilterProcessor::listUserPresets() const
 {
     return vi::presets::listFiles (vi::presets::userDirectory());
+}
+
+
+int ViFilterProcessor::popAnalysisSamples (float* destination, int maximum) noexcept
+{
+    if (destination == nullptr || maximum <= 0)
+        return 0;
+    int r1 = 0, n1 = 0, r2 = 0, n2 = 0;
+    analysisFifo.prepareToRead (maximum, r1, n1, r2, n2);
+    for (int i = 0; i < n1; ++i)
+        destination[i] = analysisRing[static_cast<size_t> (r1 + i)];
+    for (int i = 0; i < n2; ++i)
+        destination[n1 + i] = analysisRing[static_cast<size_t> (r2 + i)];
+    analysisFifo.finishedRead (n1 + n2);
+    return n1 + n2;
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

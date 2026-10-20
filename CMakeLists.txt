@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(ViFilter VERSION 0.6.0 LANGUAGES C CXX)
+project(ViFilter VERSION 0.7.0 LANGUAGES C CXX)
 
 include(CTest)
 include(FetchContent)
@@ -37,6 +37,9 @@ juce_add_plugin(ViFilter
 target_sources(ViFilter PRIVATE
     Source/AnalogDSP.h
     Source/FilterDSP.h
+    Source/ResponseMath.h
+    Source/PluginEditor.h
+    Source/PluginEditor.cpp
     Source/PresetEngine.h
     Source/PresetEngine.cpp
     Source/PluginProcessor.h
@@ -50,6 +53,7 @@ target_compile_definitions(ViFilter PUBLIC
 
 target_link_libraries(ViFilter PRIVATE
     juce::juce_audio_utils
+    juce::juce_gui_extra
     juce::juce_dsp
     juce::juce_recommended_config_flags
     juce::juce_recommended_lto_flags
@@ -101,4 +105,19 @@ if(BUILD_TESTING)
         juce::juce_recommended_config_flags
     )
     add_test(NAME ViFilterProcessorTests COMMAND ViFilterProcessorTests)
+
+    add_executable(ViFilterResponseTests Tests/ResponseMathTests.cpp)
+    target_include_directories(ViFilterResponseTests PRIVATE Source)
+    target_compile_features(ViFilterResponseTests PRIVATE cxx_std_17)
+    add_test(NAME ViFilterResponseTests COMMAND ViFilterResponseTests)
+
+    add_executable(ViFilterEditorTests Tests/EditorSnapshot.cpp)
+    target_include_directories(ViFilterEditorTests PRIVATE Source)
+    target_link_libraries(ViFilterEditorTests PRIVATE
+        ViFilter
+        juce::juce_audio_utils
+        juce::juce_gui_extra
+        juce::juce_recommended_config_flags
+    )
+    add_test(NAME ViFilterEditorTests COMMAND ViFilterEditorTests)
 endif()

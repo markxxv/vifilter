@@ -3,7 +3,7 @@
 # No Developer ID signature or Apple notarization is applied here.
 set -euo pipefail
 
-version="0.6.0"
+version="0.7.0"
 build_dir="build"
 output_dir="dist"
 if (( $# >= 1 )); then version="$1"; fi

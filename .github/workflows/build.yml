@@ -17,7 +17,7 @@ jobs:
       - name: Configure
         run: cmake -S . -B build -G Xcode -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
       - name: Build Audio Unit, Standalone and DSP tests
-        run: cmake --build build --config Release --target ViFilter_AU ViFilter_Standalone ViFilterDSPTests ViFilterAnalogTests ViFilterOversamplingTests ViFilterPresetTests ViFilterProcessorTests --parallel 2
+        run: cmake --build build --config Release --target ViFilter_AU ViFilter_Standalone ViFilterDSPTests ViFilterAnalogTests ViFilterOversamplingTests ViFilterPresetTests ViFilterProcessorTests ViFilterResponseTests ViFilterEditorTests --parallel 2
       - name: Run DSP, aliasing, preset and processor integration tests
         run: ctest --test-dir build -C Release --output-on-failure --verbose
 
@@ -45,12 +45,14 @@ jobs:
           lipo -archs "$standalone"
 
       - name: Package universal build (unsigned test installer)
-        run: bash Scripts/package-macos.sh 0.6.0 build dist
+        run: bash Scripts/package-macos.sh 0.7.0 build dist
+          cp build/ViFilter_UI_Preview.png dist/ViFilter-v0.7.0-UI-Preview.png
+          cp build/ViFilter_UI_Compact.png dist/ViFilter-v0.7.0-UI-Compact.png
 
       - name: Upload unsigned macOS test packages
         uses: actions/upload-artifact@v4
         with:
-          name: ViFilter-v0.6.0-macOS-universal-UNSIGNED
+          name: ViFilter-v0.7.0-macOS-universal-UNSIGNED
           path: dist/*
           if-no-files-found: error
           retention-days: 30
