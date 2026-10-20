@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PluginProcessor.h"
+#include "Typography.h"
 #include <juce_gui_extra/juce_gui_extra.h>
 #include <array>
 
@@ -69,7 +70,15 @@ private:
     juce::String formatKnobValue (const Knob&) const;
 
     ViFilterProcessor& processor;
-    juce::LookAndFeel_V4 darkLook;
+    class DINLookAndFeel final : public juce::LookAndFeel_V4
+    {
+    public:
+        juce::Font getPopupMenuFont() override
+        {
+            return vi::typography::font (16.0f, vi::typography::Weight::regular);
+        }
+    };
+    DINLookAndFeel darkLook;
     juce::TextEditor saveName;
     juce::String displayedPreset { "Custom" };
     juce::String feedback;

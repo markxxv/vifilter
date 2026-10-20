@@ -29,6 +29,16 @@ ctest --test-dir build-local -C Release --output-on-failure
 
 **Logic Pro does not hot-reload an already-loaded Audio Unit.** Quit and reopen Logic Pro after installing an updated binary. If the new version does not appear in Plug-in Manager, rescan the plugin and validate it with `auval -v aufx Vfil Vifr`.
 
+## Typography — DIN family
+
+Vi Filter bundles **DINish v4.007** (Light, Regular, Medium), a modern DIN-derived family licensed under **SIL Open Font License 1.1**. It is sourced from [playbeing/dinish](https://github.com/playbeing/dinish) at CMake configure time, compiled into the AU/Standalone via JUCE BinaryData, and **does not require installing fonts on your Mac**.
+
+- **Light** — product title.
+- **Regular** — labels, control captions, save dialog and preset dropdown.
+- **Medium** — knob values, frequency/dB scales and current preset name.
+
+The font is close in style to DIN Next / DIN 2014 but is **not the proprietary Monotype DIN Next or DIN 2014 font**; those require the appropriate app-embedding license. The upstream [OFL license](https://github.com/playbeing/dinish/blob/main/OFL.txt) and copyright notices apply to DINish. The editor snapshot test checks that all three embedded typefaces load; CI screenshots use those actual typefaces.
+
 ## The visual interface
 
 The plugin now has its own **monochrome, vector-rendered editor** at 1440×820 reference size, scalable down to 1100×650. Graphite and black surfaces, silver highlights, engraved tick marks and six custom-drawn knobs are rendered with JUCE Graphics. **No raster/knob filmstrip dependencies** are required; Retina output remains sharp.
@@ -41,7 +51,7 @@ The plugin now has its own **monochrome, vector-rendered editor** at 1440×820 r
 - A/B snapshot comparison while the editor is open, and Undo/Redo using the APVTS UndoManager. A/B buffers are transient and do not replace the saved host-state format.
 - Every DSP parameter remains host-automatable; the standalone UI and Logic AU use the same processor.
 
-The design follows the approved black/white mockup as closely as JUCE vector primitives allow. Precise visual fidelity must be reviewed using the **CI-generated offscreen editor screenshots** and the plug-in in Logic; hardware font rasterization and GPU/window scaling can differ.
+Typography uses the bundled DINish fonts for repeatable rendering across Macs. The design follows the approved black/white mockup as closely as JUCE vector primitives allow. Precise visual fidelity must be reviewed using the **CI-generated offscreen editor screenshots** and the plug-in in Logic; hardware font rasterization and GPU/window scaling can differ.
 
 ## DSP
 

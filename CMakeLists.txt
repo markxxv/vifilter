@@ -12,6 +12,24 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(juce)
 
+# DINish v4.007, the freely embeddable DIN-family typeface (SIL OFL 1.1).
+# Keep fonts in the build tree, not as separately redistributed source assets.
+# The pinned upstream release is compiled into the plugin via JUCE BinaryData.
+FetchContent_Declare(
+    dinish
+    GIT_REPOSITORY https://github.com/playbeing/dinish.git
+    GIT_TAG v4.007
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(dinish)
+
+juce_add_binary_data(ViFilterFontAssets
+    SOURCES
+        "${dinish_SOURCE_DIR}/fonts/otf/DINish/DINish-Light.otf"
+        "${dinish_SOURCE_DIR}/fonts/otf/DINish/DINish-Regular.otf"
+        "${dinish_SOURCE_DIR}/fonts/otf/DINish/DINish-Medium.otf"
+)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -42,6 +60,8 @@ target_sources(ViFilter PRIVATE
     Source/ResponseMath.h
     Source/PluginEditor.h
     Source/PluginEditor.cpp
+    Source/Typography.h
+    Source/Typography.cpp
     Source/PresetEngine.h
     Source/PresetEngine.cpp
     Source/PluginProcessor.h
@@ -54,6 +74,7 @@ target_compile_definitions(ViFilter PUBLIC
 )
 
 target_link_libraries(ViFilter PRIVATE
+    ViFilterFontAssets
     juce::juce_audio_utils
     juce::juce_gui_extra
     juce::juce_dsp

@@ -1,5 +1,6 @@
 #include "PluginEditor.h"
 #include "ResponseMath.h"
+#include "Typography.h"
 
 #include <algorithm>
 #include <cmath>
@@ -14,10 +15,11 @@ constexpr juce::uint32 silver = 0xfff0f1f2;
 
 void label (juce::Graphics& g, const juce::String& text, float x, float y,
             float w, float h, float size, juce::Colour colour,
-            juce::Justification align = juce::Justification::centred)
+            juce::Justification align = juce::Justification::centred,
+            vi::typography::Weight weight = vi::typography::Weight::regular)
 {
     g.setColour (colour);
-    g.setFont (juce::Font (juce::FontOptions (size)));
+    g.setFont (vi::typography::font (size, weight));
     g.drawFittedText (text, juce::Rectangle<int> (juce::roundToInt (x), juce::roundToInt (y),
                                                   juce::roundToInt (w), juce::roundToInt (h)),
                       align, 1, 0.75f);
@@ -50,7 +52,7 @@ ViFilterEditor::ViFilterEditor (ViFilterProcessor& owner)
     saveName.setColour (juce::TextEditor::textColourId, juce::Colours::white);
     saveName.setColour (juce::TextEditor::outlineColourId, juce::Colour (0xff7b7e82));
     saveName.setColour (juce::TextEditor::focusedOutlineColourId, juce::Colours::white);
-    saveName.setFont (juce::Font (juce::FontOptions (16.0f)));
+    saveName.setFont (vi::typography::font (17.0f, vi::typography::Weight::regular));
     saveName.onReturnKey = [this] { commitSave(); };
     saveName.onEscapeKey = [this] { saving = false; saveName.setVisible (false); repaint(); };
 
@@ -162,14 +164,14 @@ void ViFilterEditor::paintHeader (juce::Graphics& g)
     g.strokePath (mark, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved,
                                              juce::PathStrokeType::rounded));
     g.setColour (juce::Colour (ink));
-    g.setFont (juce::Font (juce::FontOptions ("Helvetica Neue", "Light", 31.0f)));
+    g.setFont (vi::typography::font (31.0f, vi::typography::Weight::light));
     g.drawText ("Vi Filter", juce::Rectangle<int> (108, 32, 250, 48),
                 juce::Justification::centredLeft, false);
 
     paintButton (g, { 525, 34, 45, 45 }, "<", false, 20);
     paintButton (g, { 572, 34, 291, 45 }, "", false);
-    label (g, displayedPreset, 590, 35, 248, 43, 16, juce::Colour (ink),
-           juce::Justification::centredLeft);
+    label (g, displayedPreset, 590, 35, 248, 43, 17, juce::Colour (ink),
+           juce::Justification::centredLeft, vi::typography::Weight::medium);
     g.setColour (juce::Colour (muted));
     g.drawLine (837, 52, 845, 60, 1.5f);
     g.drawLine (845, 60, 853, 52, 1.5f);
@@ -288,7 +290,8 @@ void ViFilterEditor::paintResponse (juce::Graphics& g)
         g.drawVerticalLine (juce::roundToInt (x), top, bottom);
         g.setColour (juce::Colour (0xff7d7f83));
         g.drawLine (x, bottom, x, bottom + 7.0f, 1.0f);
-        label (g, names[i], x - 25.0f, 414, 50, 19, 12.5f, juce::Colour (muted));
+        label (g, names[i], x - 25.0f, 414, 50, 19, 13.0f, juce::Colour (muted),
+               juce::Justification::centred, vi::typography::Weight::medium);
     }
     label (g, "Hz", 1232, 414, 30, 18, 12, juce::Colour (muted));
     for (int n = -24; n <= 24; n += 12)
@@ -296,8 +299,9 @@ void ViFilterEditor::paintResponse (juce::Graphics& g)
         const auto y = top + (24 - n) * (bottom - top) / 48.0f;
         g.setColour (juce::Colour (n == 0 ? 0xff414346 : 0xff303133));
         g.drawLine (left, y, right, y, 0.8f);
-        label (g, (n > 0 ? "+" : "") + juce::String (n), 56, y - 9, 45, 18, 12.5f,
-               juce::Colour (muted), juce::Justification::centredRight);
+        label (g, (n > 0 ? "+" : "") + juce::String (n), 56, y - 9, 45, 18, 13.0f,
+               juce::Colour (muted), juce::Justification::centredRight,
+               vi::typography::Weight::medium);
     }
     label (g, "dB", 62, 269, 31, 18, 12, juce::Colour (muted));
     g.setColour (juce::Colour (0xff939497));
@@ -405,7 +409,8 @@ void ViFilterEditor::paintKnob (juce::Graphics& g, const Knob& k)
 {
     const auto large = k.radius > 50;
     label (g, k.title, k.x - 105, large ? 501.0f : 626.0f,
-           210, 24, large ? 13.0f : 12.0f, juce::Colour (ink));
+           210, 24, large ? 13.5f : 12.5f, juce::Colour (ink),
+           juce::Justification::centred, vi::typography::Weight::regular);
     const auto r = k.radius;
     const auto cx = k.x, cy = k.y;
 
@@ -486,7 +491,8 @@ void ViFilterEditor::paintKnob (juce::Graphics& g, const Knob& k)
                 cx + std::sin (angle) * capR * 0.83f,
                 cy - std::cos (angle) * capR * 0.83f, large ? 2.8f : 2.0f);
     label (g, formatKnobValue (k), cx - 100, large ? 742.0f : 763.0f,
-           200, 22, large ? 18.0f : 15.0f, juce::Colour (ink));
+           200, 25, large ? 20.0f : 17.0f, juce::Colour (ink),
+           juce::Justification::centred, vi::typography::Weight::medium);
 }
 
 void ViFilterEditor::paintControls (juce::Graphics& g)

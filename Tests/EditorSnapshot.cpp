@@ -12,6 +12,12 @@ int main()
     processor.setRateAndBufferSizeDetails (48000.0, 512);
     processor.prepareToPlay (48000.0, 512);
 
+    if (! vi::typography::bundledFacesAvailable())
+    {
+        std::cerr << "Bundled DINish Light, Regular, or Medium font failed to load\n";
+        return 1;
+    }
+
     auto editor = std::unique_ptr<juce::AudioProcessorEditor> (processor.createEditor());
     if (editor == nullptr || editor->getWidth() < 1000 || editor->getHeight() < 600)
     {
