@@ -50,7 +50,6 @@ ViFilterEditor::ViFilterEditor (ViFilterProcessor& owner)
     saveName.setColour (juce::TextEditor::textColourId, juce::Colours::white);
     saveName.setColour (juce::TextEditor::outlineColourId, juce::Colour (0xff7b7e82));
     saveName.setColour (juce::TextEditor::focusedOutlineColourId, juce::Colours::white);
-    saveName.setColour (juce::TextEditor::caretColourId, juce::Colours::white);
     saveName.setFont (juce::Font (juce::FontOptions (16.0f)));
     saveName.onReturnKey = [this] { commitSave(); };
     saveName.onEscapeKey = [this] { saving = false; saveName.setVisible (false); repaint(); };
