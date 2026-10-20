@@ -83,7 +83,7 @@ if(BUILD_TESTING)
     )
     target_include_directories(ViFilterPresetTests PRIVATE Source)
     target_link_libraries(ViFilterPresetTests PRIVATE
-        juce::juce_core
+        juce::juce_data_structures
         juce::juce_recommended_config_flags
     )
     target_compile_definitions(ViFilterPresetTests PRIVATE
