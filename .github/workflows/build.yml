@@ -45,7 +45,8 @@ jobs:
           lipo -archs "$standalone"
 
       - name: Package universal build (unsigned test installer)
-        run: bash Scripts/package-macos.sh 0.7.0 build dist
+        run: |
+          bash Scripts/package-macos.sh 0.7.0 build dist
           cp build/ViFilter_UI_Preview.png dist/ViFilter-v0.7.0-UI-Preview.png
           cp build/ViFilter_UI_Compact.png dist/ViFilter-v0.7.0-UI-Compact.png
 
