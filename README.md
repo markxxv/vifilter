@@ -2,6 +2,33 @@
 
 **Vi Filter v0.7.0** — native macOS Audio Unit (AUv2) and standalone filter, JUCE 8 / C++17.
 
+## Quick start: local development (macOS)
+
+After cloning, configure the project once (or refresh CMake after pulling changes):
+
+```sh
+cd vifilter
+git pull --ff-only origin main
+cmake -S . -B build-local -G Xcode -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+```
+
+For every development iteration, **build the Audio Unit**:
+
+```sh
+cmake --build build-local --config Release --target ViFilter_AU --parallel 2
+```
+
+JUCE automatically copies the successfully rebuilt `Vi Filter.component` to **`~/Library/Audio/Plug-Ins/Components/`**, replacing the previous user-local version. No `sudo`, installer or manual copy command is needed. This happens as a **post-build action when the AU target is built/rebuilt**; an up-to-date/no-op build may not reinstall anything.
+
+Optionally run the test suite after building its targets:
+
+```sh
+cmake --build build-local --config Release --parallel 2
+ctest --test-dir build-local -C Release --output-on-failure
+```
+
+**Logic Pro does not hot-reload an already-loaded Audio Unit.** Quit and reopen Logic Pro after installing an updated binary. If the new version does not appear in Plug-in Manager, rescan the plugin and validate it with `auval -v aufx Vfil Vifr`.
+
 ## The visual interface
 
 The plugin now has its own **monochrome, vector-rendered editor** at 1440×820 reference size, scalable down to 1100×650. Graphite and black surfaces, silver highlights, engraved tick marks and six custom-drawn knobs are rendered with JUCE Graphics. **No raster/knob filmstrip dependencies** are required; Retina output remains sharp.
@@ -43,14 +70,7 @@ The `.pkg` is **unsigned and unnotarized**: for local testing only; shipping req
 
 **Local development builds install the AU automatically.** JUCE's `COPY_PLUGIN_AFTER_BUILD TRUE` copies the finished `Vi Filter.component` to `~/Library/Audio/Plug-Ins/Components/` after a successful `ViFilter_AU` build, replacing the previous local copy. This is per-user installation, with no `sudo` or manual copying.
 
-After pulling `main`, configure the existing build directory once, then build the Audio Unit as usual:
-
-```sh
-cmake -S . -B build-local -G Xcode
-cmake --build build-local --config Release --target ViFilter_AU --parallel 2
-```
-
-A regular `cmake --build build-local --config Release` that includes the AU target also triggers this copy. Building only the test executables does not. The Standalone app is not copied to the AU directory. **Building does not force Logic Pro to reload an already-open plug-in**: reopen Logic or rescan in Plug-in Manager after updating the component.
+See [Quick start](#quick-start-local-development-macos) for the exact `build-local` commands. A regular build that includes `ViFilter_AU` also triggers copying when the AU is rebuilt; building only test executables does not. The Standalone app is not copied to the Audio Unit directory.
 
 The CI ZIP is also available for manual installation on another Mac. The AU appears as **Vi Audio: Vi Filter**. Verify in Terminal:
 
