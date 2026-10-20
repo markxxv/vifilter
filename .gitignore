@@ -1,0 +1,20 @@
+# Build output
+build/
+build-*/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+
+# Xcode / macOS
+.DS_Store
+*.xcuserstate
+xcuserdata/
+DerivedData/
+*.dSYM/
+*.app
+*.component
+
+# Local editors
+.idea/
+.vscode/
