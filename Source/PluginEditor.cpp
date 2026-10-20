@@ -161,19 +161,38 @@ void ViFilterEditor::paintHeader (juce::Graphics& g)
     g.setColour (juce::Colour (ink));
     g.strokePath (mark, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved,
                                              juce::PathStrokeType::rounded));
-    label (g, "Vi Filter", 108, 32, 250, 48, 29, juce::Colour (ink),
-           juce::Justification::centredLeft);
+    g.setColour (juce::Colour (ink));
+    g.setFont (juce::Font (juce::FontOptions ("Helvetica Neue", "Light", 31.0f)));
+    g.drawText ("Vi Filter", juce::Rectangle<int> (108, 32, 250, 48),
+                juce::Justification::centredLeft, false);
 
     paintButton (g, { 525, 34, 45, 45 }, "<", false, 20);
     paintButton (g, { 572, 34, 291, 45 }, "", false);
     label (g, displayedPreset, 590, 35, 248, 43, 16, juce::Colour (ink),
            juce::Justification::centredLeft);
-    label (g, "⌄", 833, 36, 24, 41, 25, juce::Colour (muted));
+    g.setColour (juce::Colour (muted));
+    g.drawLine (837, 52, 845, 60, 1.5f);
+    g.drawLine (845, 60, 853, 52, 1.5f);
     paintButton (g, { 865, 34, 45, 45 }, ">", false, 20);
     paintButton (g, { 938, 34, 45, 45 }, "A", comparingA, 14);
     paintButton (g, { 985, 34, 45, 45 }, "B", ! comparingA, 14);
-    paintButton (g, { 1048, 34, 44, 45 }, "↶", false, 20);
-    paintButton (g, { 1095, 34, 44, 45 }, "↷", false, 20);
+    paintButton (g, { 1048, 34, 44, 45 }, "", false, 20);
+    paintButton (g, { 1095, 34, 44, 45 }, "", false, 20);
+    // White vector arcs instead of host-font-dependent Unicode arrows.
+    juce::Path undo, redo;
+    undo.startNewSubPath (1080, 61);
+    undo.cubicTo (1082, 47, 1063, 43, 1061, 55);
+    undo.lineTo (1061, 62);
+    redo.startNewSubPath (1107, 61);
+    redo.cubicTo (1105, 47, 1124, 43, 1126, 55);
+    redo.lineTo (1126, 62);
+    g.setColour (juce::Colour (ink));
+    g.strokePath (undo, juce::PathStrokeType (1.7f));
+    g.strokePath (redo, juce::PathStrokeType (1.7f));
+    g.drawLine (1057, 57, 1061, 62, 1.7f);
+    g.drawLine (1065, 57, 1061, 62, 1.7f);
+    g.drawLine (1122, 57, 1126, 62, 1.7f);
+    g.drawLine (1130, 57, 1126, 62, 1.7f);
 
     label (g, "OS", 1157, 41, 36, 30, 12, juce::Colour (muted));
     const auto os = juce::roundToInt (currentValue ("oversampling"));
@@ -360,7 +379,9 @@ void ViFilterEditor::paintResponse (juce::Graphics& g)
     g.drawRoundedRectangle (juce::Rectangle<float> (1250, 166, 129, 122), 9.0f, 1.0f);
     label (g, "ANALYZER", 1260, 181, 74, 21, 10, juce::Colour (ink),
            juce::Justification::centredLeft);
-    paintButton (g, { 1336, 180, 33, 22 }, showSpectrum ? "●" : "○", showSpectrum, 13);
+    paintButton (g, { 1336, 180, 33, 22 }, "", showSpectrum, 13);
+    g.setColour (juce::Colour (showSpectrum ? 0xffeeeeef : 0xff77797b));
+    g.fillEllipse (showSpectrum ? 1351.0f : 1339.0f, 185.0f, 12.0f, 12.0f);
     label (g, "SCALE", 1260, 216, 100, 20, 11, juce::Colour (muted),
            juce::Justification::centredLeft);
     paintButton (g, { 1260, 242, 51, 32 }, "dB", ! linearScale, 13);
@@ -446,6 +467,18 @@ void ViFilterEditor::paintKnob (juce::Graphics& g, const Knob& k)
                                              juce::Colour (0xff121315).withAlpha (0.01f),
                                              cx + capR * 0.8f, cy + capR * 0.7f, true));
     g.fillEllipse (cx - capR + 5, cy - capR + 5, 2 * (capR - 5), 2 * (capR - 5));
+
+    // A fine radial brushed-metal grain, rasterized by JUCE at any DPI.
+    for (int tick = 0; tick < 90; ++tick)
+    {
+        const auto a = 2.0f * pi * tick / 90.0f;
+        const auto inner = capR * 0.15f;
+        const auto outer = capR * 0.88f;
+        g.setColour (juce::Colours::white.withAlpha (
+            0.008f + 0.011f * std::abs (std::sin (a * 5.0f))));
+        g.drawLine (cx + std::sin (a) * inner, cy - std::cos (a) * inner,
+                    cx + std::sin (a) * outer, cy - std::cos (a) * outer, 0.65f);
+    }
 
     g.setColour (juce::Colour (0xfff1f2f3));
     g.drawLine (cx + std::sin (angle) * capR * 0.30f,
