@@ -17,6 +17,12 @@ jobs:
       - name: Configure
         run: cmake -S . -B build -G Xcode -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
       - name: Build Audio Unit, Standalone and DSP tests
-        run: cmake --build build --config Release --target ViFilter_AU ViFilter_Standalone ViFilterDSPTests ViFilterAnalogTests ViFilterOversamplingTests ViFilterPresetTests --parallel 2
-      - name: Run DSP, aliasing and preset tests
-        run: ctest --test-dir build -C Release --output-on-failure
+        run: cmake --build build --config Release --target ViFilter_AU ViFilter_Standalone ViFilterDSPTests ViFilterAnalogTests ViFilterOversamplingTests ViFilterPresetTests ViFilterProcessorTests --parallel 2
+      - name: Run DSP, aliasing, preset and processor integration tests
+        run: ctest --test-dir build -C Release --output-on-failure --verbose
+
+      - name: Validate Audio Unit with Apple's auval
+        run: |
+          mkdir -p "$HOME/Library/Audio/Plug-Ins/Components"
+          cp -R "build/ViFilter_artefacts/Release/AU/Vi Filter.component" "$HOME/Library/Audio/Plug-Ins/Components/"
+          auval -v aufx Vfil Vifr

@@ -128,6 +128,15 @@ void testInvalidFilesAndAtomicDecoding()
     check (vi::presets::decodeXml (*broken, decoded, program).failed(),
            "Non-finite parameter must be rejected");
 
+    for (const auto& invalid : { "1e", ".", "+", "2.3.4", "1e9999" })
+    {
+        param->setAttribute ("value", invalid);
+        check (vi::presets::decodeXml (*broken, decoded, program).failed(),
+               "Malformed numeric literals must be rejected");
+    }
+    check (valueOf (decoded, "cutoff") == 10500.0f,
+           "Malformed file must not modify decoded output");
+
     auto clamp = vi::presets::makeSessionXml (state, 0);
     auto* value = clamp->getChildByName ("ViFilterParameters")
                        ->getChildByAttribute ("id", "resonance");

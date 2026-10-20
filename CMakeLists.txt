@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(ViFilter VERSION 0.4.0 LANGUAGES C CXX)
+project(ViFilter VERSION 0.5.0 LANGUAGES C CXX)
 
 include(CTest)
 include(FetchContent)
@@ -91,4 +91,14 @@ if(BUILD_TESTING)
         JUCE_USE_CURL=0
     )
     add_test(NAME ViFilterPresetTests COMMAND ViFilterPresetTests)
+
+    # Exercise the actual plugin processor linked from JUCE's shared-code target.
+    add_executable(ViFilterProcessorTests Tests/ProcessorIntegrationTests.cpp)
+    target_include_directories(ViFilterProcessorTests PRIVATE Source)
+    target_link_libraries(ViFilterProcessorTests PRIVATE
+        ViFilter
+        juce::juce_audio_utils
+        juce::juce_recommended_config_flags
+    )
+    add_test(NAME ViFilterProcessorTests COMMAND ViFilterProcessorTests)
 endif()

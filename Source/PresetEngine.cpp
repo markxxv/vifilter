@@ -1,7 +1,9 @@
 #include "PresetEngine.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <cmath>
+#include <cstdlib>
 
 namespace vi::presets
 {
@@ -89,9 +91,14 @@ juce::Result decodeXml (const juce::XmlElement& xml,
             if (raw.isEmpty() || ! raw.containsOnly ("+-0123456789.eE"))
                 return juce::Result::fail ("Invalid value for: " + juce::String (spec.id));
 
-            value = raw.getDoubleValue();
-            if (! std::isfinite (value))
-                return juce::Result::fail ("Non-finite value for: " + juce::String (spec.id));
+            // getDoubleValue accepts incomplete numbers such as "1e" as 1.
+            // Require complete, finite decimal input before touching live state.
+            errno = 0;
+            char* end = nullptr;
+            const auto* start = raw.toRawUTF8();
+            value = std::strtod (start, &end);
+            if (start == end || *end != '\0' || errno == ERANGE || ! std::isfinite (value))
+                return juce::Result::fail ("Malformed value for: " + juce::String (spec.id));
         }
 
         value = std::clamp (value, static_cast<double> (spec.minimum),

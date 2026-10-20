@@ -348,9 +348,11 @@ void ViFilterProcessor::setCurrentProgram (int index)
         return;
 
     // "Custom" just deselects the factory program; it does not erase parameters.
-    selectedProgram.store (index, std::memory_order_relaxed);
     if (index == 0)
+    {
+        selectedProgram.store (0, std::memory_order_relaxed);
         return;
+    }
 
     const auto& chosen = vi::presets::factory[static_cast<size_t> (index - 1)];
     for (size_t i = 0; i < vi::presets::specs.size(); ++i)
@@ -362,6 +364,9 @@ void ViFilterProcessor::setCurrentProgram (int index)
                 parameter->setValueNotifyingHost (value);
         }
     }
+    // Parameter notifications are synchronous: only mark the program selected
+    // after applying its values, otherwise the listener can clear it as Custom.
+    selectedProgram.store (index, std::memory_order_relaxed);
 }
 
 const juce::String ViFilterProcessor::getProgramName (int index)
