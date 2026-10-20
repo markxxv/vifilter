@@ -5,22 +5,33 @@ namespace vi::typography
 {
 namespace
 {
-juce::Typeface::Ptr loadFace (const char* resource)
+juce::Typeface::Ptr loadFace (const char* filename)
 {
-    int bytes = 0;
-    const auto* data = BinaryData::getNamedResource (resource, bytes);
-    if (data == nullptr || bytes <= 0)
-        return nullptr;
-    return juce::Typeface::createSystemTypefaceFor (data, static_cast<size_t> (bytes));
+    // JUCE BinaryData normalises hyphens in resource identifiers differently
+    // from filenames. Resolve by the original filename, not a guessed symbol.
+    for (int i = 0; i < BinaryData::namedResourceListSize; ++i)
+    {
+        const auto* key = BinaryData::namedResourceList[i];
+        const auto* original = BinaryData::getNamedResourceOriginalFilename (key);
+        if (original == nullptr || ! juce::String (original).endsWithIgnoreCase (filename))
+            continue;
+
+        int bytes = 0;
+        const auto* data = BinaryData::getNamedResource (key, bytes);
+        if (data != nullptr && bytes > 0)
+            return juce::Typeface::createSystemTypefaceFor (
+                data, static_cast<size_t> (bytes));
+    }
+    return nullptr;
 }
 
 const juce::Typeface::Ptr& faceFor (Weight weight)
 {
     // Reuse typeface instances. Creating a Typeface for every paint() is costly
     // and can provoke OS font registration/allocations.
-    static const auto light = loadFace ("DINish_Light_otf");
-    static const auto regular = loadFace ("DINish_Regular_otf");
-    static const auto medium = loadFace ("DINish_Medium_otf");
+    static const auto light = loadFace ("DINish-Light.otf");
+    static const auto regular = loadFace ("DINish-Regular.otf");
+    static const auto medium = loadFace ("DINish-Medium.otf");
 
     switch (weight)
     {
