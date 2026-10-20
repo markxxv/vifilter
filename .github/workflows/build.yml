@@ -39,8 +39,8 @@ jobs:
         run: |
           au="build/ViFilter_artefacts/Release/AU/Vi Filter.component/Contents/MacOS/Vi Filter"
           standalone="build/ViFilter_artefacts/Release/Standalone/Vi Filter.app/Contents/MacOS/Vi Filter"
-          lipo -verify_arch arm64 x86_64 "$au"
-          lipo -verify_arch arm64 x86_64 "$standalone"
+          lipo "$au" -verify_arch arm64 x86_64
+          lipo "$standalone" -verify_arch arm64 x86_64
           lipo -archs "$au"
           lipo -archs "$standalone"
 

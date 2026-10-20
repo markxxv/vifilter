@@ -18,7 +18,7 @@ if [[ ! -f "$binary" ]]; then
   exit 1
 fi
 
-lipo -verify_arch arm64 x86_64 "$binary" || {
+lipo "$binary" -verify_arch arm64 x86_64 || {
   echo "AU is not universal (arm64 + x86_64)." >&2
   exit 1
 }
