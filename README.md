@@ -1,84 +1,77 @@
 # Vi Filter
 
-**Vi Filter** is a native macOS AUv2 / Standalone audio effect, written in C++17 with JUCE 8. The custom GUI remains **deliberately deferred** until the final visual-design phase.
+Vi Filter is a native AUv2 / Standalone audio filter for Logic Pro, built with C++17 and JUCE 8. **v0.6.0 — Release Readiness.** Its bespoke UI is still intentionally deferred; use Logic's generic parameter view.
 
-## v0.5.0 — Engineering QA
+## Sound engine
 
-### DSP
-- 12 dB/oct TPT state-variable Low-pass, High-pass and Band-pass filter.
-- Cutoff 20–20,000 Hz, Resonance 0–1 (Q = 0.5–12), Output Gain -24…+24 dB.
-- Post-filter saturation with Drive 0–24 dB and Soft, Tube, Tape digital waveshapers.
-- 1× / 2× / 4× saturation oversampling with JUCE FIR anti-alias filters; constant reported host latency and 40 ms quality-switch fades.
-- 20 ms smoothing for cutoff, resonance, output gain, drive and modes; Mono/Stereo support.
+- 12 dB/oct TPT Low-pass / High-pass / Band-pass, Cutoff 20–20 kHz, Resonance Q 0.5–12, Output Gain -24 to +24 dB.
+- Drive 0–24 dB and Soft / Tube / Tape saturation. JUCE FIR anti-alias oversampling: 1×, 2×, 4×, constant reported host latency.
+- 20 ms smooth automation and 40 ms crossfade on oversampling changes; independent Mono / Stereo states.
+- Eight factory programs and user `.vifilterpreset` file backend; forwards-compatible versioned schema validation and migration of session data from v0.1–v0.3.
 
-### Preset engine
-- Eight immutable factory programs: Clean Start, Soft Piano, Velvet Lowpass, Warm Tape, Gentle Tube, Focused Mid, Low Cut Air, Vintage Radio.
-- Factory programs are exposed via JUCE host program APIs (host-dependent visibility). **Custom** is program 0. A factory-to-Custom selection bug has been fixed in v0.5.0 and covered by a processor integration test.
-- Backend save/load/list for user XML `*.vifilterpreset` files under `~/Library/Application Support/Vi Audio/Vi Filter/Presets/`. Safe file writes, no silent overwrite, size and filename validation.
-- Full session state persistence and migration from bare v0.1–v0.3 `ViFilterParameters` to schema 1.
-- Strict numeric parsing prevents malformed literals from silently becoming different parameter values; corrupt restores keep the current state.
+## v0.6.0 changes
 
-**No GUI/file picker is implemented yet**. You can use Logic's host settings; user file functions are currently available to a future UI or programmatic harness.
+- **CPU optimization:** precomputed/cached saturation transfer normalizations per Drive value. High-cost `pow`, `atan` and `tanh` normalizations are no longer repeated per channel and oversampled sample. DSP regression compares with v0.5 curves.
+- **Real-time checks:** processor integration tests instrument ordinary C++ heap allocations while `processBlock` runs across 1/2/4× quality changes, irregular buffers including oversized blocks, and 44.1/48/96 kHz sample rates.
+- **Universal macOS build:** CMake Xcode compiles both `arm64` (Apple Silicon) and `x86_64` (Intel) slices and CI verifies both with `lipo`.
+- **AU validation:** CI verifies code signature and Info.plist and refreshes AudioComponentRegistrar before Apple's `auval` validation.
+- **Distribution artifacts:** CI publishes a manual-install ZIP, an **unsigned system-wide `.pkg`** test installer and SHA256 checksums.
+- **Manual Logic QA:** `Docs/LOGIC_QA.md` documents precise functional checks on real Macs.
 
-### Integration and quality assurance
+## Build and test (macOS)
 
-`ViFilterProcessorTests` instantiates the **actual JUCE audio processor** and checks:
-- Factory-program selection, user edits reverting to Custom, and project-state roundtrips.
-- Corrupt host-state rejection without destroying the current parameters.
-- Host-style parameter changes (filter mode, drive, character, oversampling, resonance and cutoff).
-- Mono and Stereo processing on 44.1/48/96 kHz; silent right-channel isolation.
-- Short, irregular and **oversized processing blocks** (larger than the prepared block size).
-- Rapid mode and quality changes while audio is processing; finite bounded output and constant reported latency.
-- Release/reprepare after sample-rate changes.
-- Informational wall-clock CPU measurements for 1× and 4× oversampling, with realtime throughput and relative-cost reporting. Benchmarks are **not portable absolute performance guarantees**.
-
-The other four tests cover filter response, analog waveshaping, alias suppression, and preset file integrity. macOS CI builds AU and Standalone, runs all five test executables, then installs the AU in the runner and runs Apple's **`auval`** registration/validation.
-
-**Limitations:** GitHub Actions cannot operate your personal Logic project or substitute for listening tests. Manual inspection in Logic Pro is still needed, especially host automation and latency compensation while switching quality, restoring old projects, and macOS Intel/Apple Silicon distribution.
-
-## Build and test
-
-Requires macOS, Xcode Command Line Tools, Git and CMake 3.22+. JUCE dependency pinned to `8.0.16-security`.
+Requires Xcode, Command Line Tools, Git and CMake 3.22+. Pinned JUCE tag `8.0.16-security` is fetched on initial configure.
 
 ```sh
 git clone https://github.com/markxxv/vifilter.git
 cd vifilter
-cmake -S . -B build -G Xcode -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
-cmake --build build --config Release --target ViFilter_AU ViFilter_Standalone ViFilterDSPTests ViFilterAnalogTests ViFilterOversamplingTests ViFilterPresetTests ViFilterProcessorTests
-ctest --test-dir build -C Release --output-on-failure --verbose
+cmake -S . -B build -G Xcode -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+cmake --build build --config Release --target ViFilter_AU ViFilter_Standalone ViFilterDSPTests ViFilterAnalogTests ViFilterOversamplingTests ViFilterPresetTests ViFilterProcessorTests --parallel 2
+ctest --test-dir build -C Release --output-on-failure
+bash Scripts/package-macos.sh 0.6.0 build dist
 ```
 
-AU component path: `build/ViFilter_artefacts/Release/AU/Vi Filter.component`
-
-Install for the current macOS user:
+The component is `build/ViFilter_artefacts/Release/AU/Vi Filter.component`. Check slices:
 
 ```sh
-mkdir -p "$HOME/Library/Audio/Plug-Ins/Components"
-cp -R "build/ViFilter_artefacts/Release/AU/Vi Filter.component" "$HOME/Library/Audio/Plug-Ins/Components/"
+lipo -archs "build/ViFilter_artefacts/Release/AU/Vi Filter.component/Contents/MacOS/Vi Filter"
+```
+
+### Artifacts
+
+| File | How to use |
+| --- | --- |
+| `ViFilter-0.6.0-macOS-universal.zip` | Unzip and manually copy `Vi Filter.component` to `~/Library/Audio/Plug-Ins/Components/` |
+| `ViFilter-0.6.0-macOS-universal-unsigned.pkg` | Test installer targeting `/Library/Audio/Plug-Ins/Components/` system-wide; requires administrator authorization |
+| `SHA256SUMS.txt` | SHA-256 hashes of the ZIP and PKG |
+
+Download ZIP/PKG from the successful **GitHub Actions run's Artifacts** section. These are CI test artifacts, not a signed, notarized public release.
+
+Local AU check after install:
+
+```sh
+killall -9 AudioComponentRegistrar 2>/dev/null || true
 auval -v aufx Vfil Vifr
 ```
 
-Restart Logic Pro, or rescan in Plug-in Manager, and use **Vi Audio → Vi Filter** in Audio FX.
+Restart Logic Pro or rescan Plug-in Manager, then look for `Vi Audio → Vi Filter`.
 
-### Manual Logic Pro checklist
+**Important compatibility boundary:** the CI runner is a genuine macOS machine and validates AU with Apple `auval`, but **Logic Pro is not installed on that runner**. Successful `auval` is not a substitute for a Logic Pro session on an Intel/Apple Silicon Mac. The final real-host checklist in [`Docs/LOGIC_QA.md`](Docs/LOGIC_QA.md) must be completed on actual Logic Pro installations.
 
-- Load Mono and Stereo on instrument/audio tracks.
-- Open Logic's generic controls and automate Cutoff, Resonance, Mode and Drive.
-- Test 1× / 2× / 4× changes; check audible transitions and fixed reported latency under PDC.
-- Save, close and reload sessions, including a project saved by v0.3.
-- Compare levels at high resonance and Drive; keep monitors at a safe level.
-- Verify CPU load and playback at 44.1, 48 and 96 kHz with small and large buffer sizes.
+### Benchmarks
+
+`ViFilterProcessorTests` prints a wall-clock processing time and real-time factor for each selected quality. Measurements are comparative, not representative of every Mac or full Logic project. A passing allocation guard covers ordinary C++ `new`/`new[]` within the tested callbacks; it is not a proof of the absence of all possible real-time stalls.
+
+### Release prerequisites
+
+- Review JUCE and Vi Filter distribution licensing.
+- Sign bundle using Developer ID Application and the installer using Developer ID Installer; notarize and staple before public distribution.
+- Complete the Logic Pro checklist on real Macs, including state compatibility and plug-in delay compensation.
+- Finish the bespoke UI only after technical and acoustic acceptance. There is **no GUI or built-in preset file picker yet**.
 
 ## Roadmap
 
-1. v0.1.0 — Foundation.
-2. v0.2.0 — Core DSP.
-3. v0.3.0 — Analog Engine.
-4. v0.4.0 — Preset Engine.
-5. **v0.5.0 — Engineering QA**: processor tests, CPU measurements, AU validation (current).
-6. **Next:** v0.6.0 — final technical reliability pass: inspect and fix any findings from AU validation, Logic interoperability, real-time safety, and release build/distribution preparations.
-7. **Final:** independent UI/UX art direction, responsive HiDPI controls, accurate frequency-response visualization, integrated presets browser, accessibility.
-
-## License
-
-JUCE licensing and Vi Filter's redistribution license require review before publication. See [JUCE licensing](https://juce.com/legal/).
+1. v0.1 Foundation → v0.2 Core DSP → v0.3 Analog Engine → v0.4 Presets → v0.5 Engineering QA.
+2. **v0.6 Release Readiness:** universal binaries, test installer, audio callback audits and real-host acceptance checklist.
+3. **Next stage:** actual Logic Pro smoke tests and resolution of any discovered audio/host issues.
+4. **Final stage:** separately art-directed UI, precise frequency response curve, preset browser, HiDPI/accessibility.

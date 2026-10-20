@@ -79,7 +79,9 @@ private:
     std::array<std::array<vi::SampleDelay<2048>, 2>, 3> alignment;
     std::array<int, 3> alignmentSamples {};
     std::array<juce::AudioBuffer<float>, 2> pathBuffers;
-    std::vector<float> driveSamples;
+    std::vector<vi::SaturationParameters> driveSamples;
+    vi::SaturationParameters lastSaturation;
+    float lastDriveValue = -1.0f;
     std::vector<std::array<float, 3>> characterSamples;
     int maxChunkSize = 1;
     int activeQuality = 0;

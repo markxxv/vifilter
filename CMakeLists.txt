@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(ViFilter VERSION 0.5.0 LANGUAGES C CXX)
+project(ViFilter VERSION 0.6.0 LANGUAGES C CXX)
 
 include(CTest)
 include(FetchContent)

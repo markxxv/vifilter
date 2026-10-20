@@ -149,6 +149,8 @@ void ViFilterProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     outputGain.setCurrentAndTargetValue (juce::Decibels::decibelsToGain (
         outputGainParameter->load (std::memory_order_relaxed)));
     driveDb.setCurrentAndTargetValue (driveParameter->load (std::memory_order_relaxed));
+    lastDriveValue = -1.0f;
+    lastSaturation = {};
 
     const auto mode = choice (modeParameter, 2);
     const auto character = choice (characterParameter, 2);
@@ -210,15 +212,15 @@ void ViFilterProcessor::renderSaturationPath (int quality,
             const auto index = static_cast<size_t> (i / factor);
             const auto x = static_cast<double> (values[i]);
             const auto& mix = characterSamples[index];
-            const auto drive = static_cast<double> (driveSamples[index]);
-            if (drive <= 0.0)
+            const auto& saturation = driveSamples[index];
+            if (saturation.amount <= 0.0)
                 continue;
 
             double colored = 0.0;
             for (int character = 0; character < 3; ++character)
                 if (mix[static_cast<size_t> (character)] > 0.0f)
                     colored += mix[static_cast<size_t> (character)]
-                               * vi::saturate (x, drive, character);
+                               * vi::saturateWithParameters (x, saturation, character);
             values[i] = static_cast<float> (colored);
         }
     }
@@ -287,7 +289,13 @@ void ViFilterProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             const auto low = modeWeights[0].getNextValue();
             const auto high = modeWeights[1].getNextValue();
             const auto band = modeWeights[2].getNextValue();
-            driveSamples[static_cast<size_t> (i)] = driveDb.getNextValue();
+            const auto driveNow = driveDb.getNextValue();
+            if (driveNow != lastDriveValue)
+            {
+                lastSaturation = vi::makeSaturationParameters (driveNow);
+                lastDriveValue = driveNow;
+            }
+            driveSamples[static_cast<size_t> (i)] = lastSaturation;
             auto& characterNow = characterSamples[static_cast<size_t> (i)];
             for (int c = 0; c < 3; ++c)
                 characterNow[static_cast<size_t> (c)] = characterWeights[static_cast<size_t> (c)].getNextValue();

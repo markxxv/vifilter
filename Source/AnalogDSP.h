@@ -7,32 +7,61 @@
 
 namespace vi
 {
-// Digital waveshapers. Every character is exactly transparent at 0 dB.
-inline double saturate (double input, double driveDb, int character) noexcept
+// Prepare transfer coefficients once per distinct Drive value instead of doing
+// expensive pow/atan/tanh normalizations for each oversampled channel sample.
+struct SaturationParameters
+{
+    double amount = 0.0;
+    double gain = 1.0;
+    double softNorm = 1.0;
+    double tubeNorm = 1.0;
+    double tapeNorm = 1.0;
+};
+
+inline SaturationParameters makeSaturationParameters (double driveDb) noexcept
 {
     const auto amount = std::clamp (driveDb / 24.0, 0.0, 1.0);
     if (amount <= 0.0)
-        return input;
+        return {};
+
+    constexpr double bias = 0.35;
     const auto gain = std::pow (10.0, std::clamp (driveDb, 0.0, 24.0) / 20.0);
+    const auto softNorm = 1.0 / std::tanh (gain);
+    const auto tubeNorm = 1.0 / (std::tanh (gain + bias) - std::tanh (bias));
+    const auto tapeNorm = 1.0 / std::atan (gain);
+    return { amount, gain, softNorm, tubeNorm, tapeNorm };
+}
+
+inline double saturateWithParameters (double input,
+                                     const SaturationParameters& p,
+                                     int character) noexcept
+{
+    if (p.amount <= 0.0)
+        return input;
+
     double shaped;
     switch (character)
     {
         case 1:
         {
             constexpr double bias = 0.35;
-            const auto zero = std::tanh (bias);
-            const auto scale = std::tanh (gain + bias) - zero;
-            shaped = (std::tanh (gain * input + bias) - zero) / scale;
+            shaped = (std::tanh (p.gain * input + bias) - std::tanh (bias)) * p.tubeNorm;
             break;
         }
         case 2:
-            shaped = std::atan (gain * input) / std::atan (gain);
+            shaped = std::atan (p.gain * input) * p.tapeNorm;
             break;
         default:
-            shaped = std::tanh (gain * input) / std::tanh (gain);
+            shaped = std::tanh (p.gain * input) * p.softNorm;
             break;
     }
-    return input + amount * (shaped - input);
+    return input + p.amount * (shaped - input);
+}
+
+// Retain the stateless entry point for independent tests and external DSP users.
+inline double saturate (double input, double driveDb, int character) noexcept
+{
+    return saturateWithParameters (input, makeSaturationParameters (driveDb), character);
 }
 
 template <size_t capacity = 2048>

@@ -6,6 +6,35 @@
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <atomic>
+#include <new>
+
+// Test-only guard: detect ordinary heap allocations during processBlock.
+// The instrumentation is not compiled into the plugin or standalone build.
+namespace
+{
+thread_local bool insideAudioCallback = false;
+std::atomic<unsigned long> realtimeAllocations { 0 };
+}
+
+void* operator new (std::size_t bytes)
+{
+    if (insideAudioCallback)
+        realtimeAllocations.fetch_add (1, std::memory_order_relaxed);
+    if (auto* memory = std::malloc (bytes == 0 ? 1 : bytes))
+        return memory;
+    throw std::bad_alloc();
+}
+
+void* operator new[] (std::size_t bytes)
+{
+    return ::operator new (bytes);
+}
+
+void operator delete (void* p) noexcept { std::free (p); }
+void operator delete[] (void* p) noexcept { ::operator delete (p); }
+void operator delete (void* p, std::size_t) noexcept { ::operator delete (p); }
+void operator delete[] (void* p, std::size_t) noexcept { ::operator delete (p); }
 
 namespace
 {
@@ -146,7 +175,12 @@ void testAudioAndAutomation (double rate, int channels)
         }
 
         midi.clear();
+        const auto allocationsBefore = realtimeAllocations.load (std::memory_order_relaxed);
+        insideAudioCallback = true;
         processor.processBlock (audio, midi);
+        insideAudioCallback = false;
+        require (realtimeAllocations.load (std::memory_order_relaxed) == allocationsBefore,
+                 "Audio callback must not allocate heap memory");
 
         for (int channel = 0; channel < channels; ++channel)
             for (int i = 0; i < count; ++i)
