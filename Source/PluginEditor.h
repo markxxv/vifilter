@@ -20,6 +20,10 @@ public:
     void mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
     bool keyPressed (const juce::KeyPress&) override;
 
+    // Render a fresh analyzer frame on the message thread, including headless previews.
+    // Avoid modal message loops: they may be disabled by JUCE build configuration.
+    void refreshAnalyzerNow();
+
 private:
     static constexpr float designWidth = 1440.0f;
     static constexpr float designHeight = 820.0f;

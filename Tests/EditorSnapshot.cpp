@@ -52,8 +52,9 @@ int main()
         midi.clear();
         processor.processBlock (audio, midi);
     }
-    // One UI timer tick drains the lock-free FIFO and calculates the actual FFT.
-    juce::MessageManager::getInstance()->runDispatchLoopUntil (150);
+    // Compute one real FFT frame synchronously on the message thread.
+    // JUCE_MODAL_LOOPS_PERMITTED may be disabled on some macOS/Xcode builds.
+    static_cast<ViFilterEditor*> (editor.get())->refreshAnalyzerNow();
 
     // Exercise both the intended desktop size and the minimum supported size.
     for (const auto dimensions : { std::pair<int, int> { 1100, 650 },

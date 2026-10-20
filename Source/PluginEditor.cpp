@@ -820,6 +820,12 @@ void ViFilterEditor::updateAnalyzer()
     measuredLevel = std::sqrt (energy / fftSize);
 }
 
+void ViFilterEditor::refreshAnalyzerNow()
+{
+    updateAnalyzer();
+    repaint();
+}
+
 void ViFilterEditor::timerCallback()
 {
     updateAnalyzer();
