@@ -41,7 +41,18 @@ The `.pkg` is **unsigned and unnotarized**: for local testing only; shipping req
 
 ## Installation
 
-Extract `Vi Filter.component` from the ZIP into `~/Library/Audio/Plug-Ins/Components/`, restart Logic and rescan in Plug-in Manager. The AU appears as **Vi Audio: Vi Filter**. Verify in Terminal:
+**Local development builds install the AU automatically.** JUCE's `COPY_PLUGIN_AFTER_BUILD TRUE` copies the finished `Vi Filter.component` to `~/Library/Audio/Plug-Ins/Components/` after a successful `ViFilter_AU` build, replacing the previous local copy. This is per-user installation, with no `sudo` or manual copying.
+
+After pulling `main`, configure the existing build directory once, then build the Audio Unit as usual:
+
+```sh
+cmake -S . -B build-local -G Xcode
+cmake --build build-local --config Release --target ViFilter_AU --parallel 2
+```
+
+A regular `cmake --build build-local --config Release` that includes the AU target also triggers this copy. Building only the test executables does not. The Standalone app is not copied to the AU directory. **Building does not force Logic Pro to reload an already-open plug-in**: reopen Logic or rescan in Plug-in Manager after updating the component.
+
+The CI ZIP is also available for manual installation on another Mac. The AU appears as **Vi Audio: Vi Filter**. Verify in Terminal:
 
 ```sh
 killall -9 AudioComponentRegistrar 2>/dev/null || true

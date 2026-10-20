@@ -31,7 +31,9 @@ juce_add_plugin(ViFilter
     IS_MIDI_EFFECT FALSE
     AU_MAIN_TYPE kAudioUnitType_Effect
     FORMATS AU Standalone
-    COPY_PLUGIN_AFTER_BUILD FALSE
+    # Install the freshly built AU into the current macOS user's Components folder.
+    # JUCE performs this as a post-build step for ViFilter_AU.
+    COPY_PLUGIN_AFTER_BUILD TRUE
 )
 
 target_sources(ViFilter PRIVATE
