@@ -23,6 +23,14 @@ jobs:
 
       - name: Validate Audio Unit with Apple's auval
         run: |
+          component="build/ViFilter_artefacts/Release/AU/Vi Filter.component"
+          plutil -lint "$component/Contents/Info.plist"
+          plutil -p "$component/Contents/Info.plist" | head -100
+          codesign --verify --deep --strict --verbose=2 "$component"
           mkdir -p "$HOME/Library/Audio/Plug-Ins/Components"
-          cp -R "build/ViFilter_artefacts/Release/AU/Vi Filter.component" "$HOME/Library/Audio/Plug-Ins/Components/"
+          cp -R "$component" "$HOME/Library/Audio/Plug-Ins/Components/"
+          # The registrar may cache the AU directory before the component is installed.
+          killall -9 AudioComponentRegistrar 2>/dev/null || true
+          sleep 5
+          auval -a | grep -i 'Vi Filter' || true
           auval -v aufx Vfil Vifr
