@@ -1,7 +1,10 @@
 #pragma once
 
+#include "FilterDSP.h"
+
 #include <juce_audio_processors/juce_audio_processors.h>
-#include <juce_dsp/juce_dsp.h>
+#include <array>
+#include <atomic>
 
 class ViFilterProcessor final : public juce::AudioProcessor
 {
@@ -11,7 +14,6 @@ public:
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
-
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
 
     juce::AudioProcessorEditor* createEditor() override;
@@ -37,6 +39,14 @@ private:
 
     juce::AudioProcessorValueTreeState parameters;
     std::atomic<float>* outputGainParameter = nullptr; // Owned by parameters.
+    std::atomic<float>* cutoffParameter = nullptr;
+    std::atomic<float>* resonanceParameter = nullptr;
+    std::atomic<float>* modeParameter = nullptr;
+
+    std::array<vi::StateVariableFilter, 2> filters;
+    juce::SmoothedValue<double, juce::ValueSmoothingTypes::Linear> logCutoff;
+    juce::SmoothedValue<double, juce::ValueSmoothingTypes::Linear> resonance;
+    std::array<juce::SmoothedValue<double, juce::ValueSmoothingTypes::Linear>, 3> modeWeights;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> outputGain;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ViFilterProcessor)

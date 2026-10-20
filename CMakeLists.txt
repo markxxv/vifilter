@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(ViFilter VERSION 0.1.0 LANGUAGES C CXX)
+project(ViFilter VERSION 0.2.0 LANGUAGES C CXX)
 
-# Start with the mature JUCE 8 line. Keep this tag fixed for reproducible builds.
+include(CTest)
 include(FetchContent)
 FetchContent_Declare(
     juce
@@ -35,6 +35,7 @@ juce_add_plugin(ViFilter
 )
 
 target_sources(ViFilter PRIVATE
+    Source/FilterDSP.h
     Source/PluginProcessor.h
     Source/PluginProcessor.cpp
 )
@@ -51,3 +52,10 @@ target_link_libraries(ViFilter PRIVATE
     juce::juce_recommended_lto_flags
     juce::juce_recommended_warning_flags
 )
+
+if(BUILD_TESTING)
+    add_executable(ViFilterDSPTests Tests/FilterDSPTests.cpp)
+    target_include_directories(ViFilterDSPTests PRIVATE Source)
+    target_compile_features(ViFilterDSPTests PRIVATE cxx_std_17)
+    add_test(NAME ViFilterDSPTests COMMAND ViFilterDSPTests)
+endif()

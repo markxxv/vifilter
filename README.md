@@ -1,64 +1,71 @@
 # Vi Filter
 
-**Vi Filter** is a native Audio Unit effect for Apple Logic Pro, built with C++ and [JUCE](https://juce.com/).
+**Vi Filter** is a native Audio Unit (AUv2) audio filter for Logic Pro, built with C++17 and [JUCE](https://juce.com/).
 
-> **Stage 1 — Foundation.** This is a working audio-processing skeleton, **not yet a filter**. It passes mono/stereo audio through with a host-automatable Output Gain parameter (-24 to +24 dB), a 20 ms gain ramp, and saved/restored plugin state. The custom interface is intentionally postponed until the final phase.
+> **Stage 2 — Core DSP (v0.2.0).** Low-pass / high-pass / band-pass filters are implemented. The custom interface is deliberately reserved for the **final** development phase; use the host's generic parameter view.
 
-## Requirements
+## Implemented
 
-- macOS, Xcode with Command Line Tools, CMake 3.22+ and Git
-- Internet access on first CMake configure (JUCE is downloaded automatically)
-- Logic Pro for AU hosting, or the standalone build for basic audio-path checks
+- Topology-preserving state-variable (TPT/SVF) filter, 12 dB/octave, two independent channel states.
+- Low-pass, high-pass, and band-pass modes with a 20 ms crossfade between outputs (filter history is not reset during mode changes).
+- **Cutoff** 20 Hz–20 kHz with logarithmic 20 ms smoothing. Effective cutoff is clamped to 45% of sample rate at low host sample rates.
+- **Resonance** 0–1 (mapping to Q = 0.5–12 quadratically) with 20 ms smoothing.
+- **Output Gain** -24 to +24 dB with 20 ms smoothing.
+- Host-automatable parameters with serialized project state via JUCE AudioProcessorValueTreeState.
+- Native AUv2 and Standalone targets; mono and stereo buses.
+- Portable DSP unit tests: frequency response, DC behaviour, channel isolation, reset and stability sweeps over five sample rates.
 
-JUCE is pinned to **8.0.16-security** in `CMakeLists.txt` for reproducible builds.
+## Build (macOS)
 
-## Build
+Requires Xcode + Command Line Tools, CMake 3.22+ and Git; the initial CMake run downloads pinned JUCE tag **8.0.16-security**.
 
 ```sh
 git clone https://github.com/markxxv/vifilter.git
 cd vifilter
 cmake -S . -B build -G Xcode -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
-cmake --build build --config Release --target ViFilter_AU ViFilter_Standalone
+cmake --build build --config Release --target ViFilter_AU ViFilter_Standalone ViFilterDSPTests
+ctest --test-dir build -C Release --output-on-failure
 ```
 
-The resulting files will be under:
+Output:
 
 - `build/ViFilter_artefacts/Release/AU/Vi Filter.component`
 - `build/ViFilter_artefacts/Release/Standalone/Vi Filter.app`
 
-To install the AU for the current macOS account:
+Install for the current account and restart Logic Pro (or rescan in Plug-in Manager):
 
 ```sh
 mkdir -p "$HOME/Library/Audio/Plug-Ins/Components"
 cp -R "build/ViFilter_artefacts/Release/AU/Vi Filter.component" "$HOME/Library/Audio/Plug-Ins/Components/"
-```
-
-Restart Logic Pro (or rescan in Plugin Manager), then look for **Vi Filter** under **Vi Audio** in the Audio FX menu. For an AU registration check:
-
-```sh
 auval -v aufx Vfil Vifr
 ```
 
-The plugin currently has **no custom editor**; use the host's generic parameter controls to test Output Gain. Output Gain must remain automatable and must persist after saving/reopening a Logic project.
+In Logic Pro, add **Vi Filter** under **Vi Audio** as Audio FX. Use generic host controls to automate **Filter Mode**, **Cutoff**, **Resonance** and **Output Gain**. Verify those values survive saving and reopening a project. Test at safe monitor levels; high resonance can amplify narrow frequency bands.
 
-## Architecture
+Portable DSP-only check (any C++17 compiler; JUCE not required):
 
-- `Source/PluginProcessor.h/.cpp` — audio callback, channel validation, parameter management and state persistence
-- `Source/FilterDSP.*` — future DSP module (not implemented in Stage 1)
-- `Source/Presets.*` — future factory/user presets (not implemented in Stage 1)
-- `Source/ResponseCurve.*` and editor — **final visual phase only**
-- `.github/workflows/build.yml` — macOS build check on pushes and pull requests
+```sh
+c++ -std=c++17 -O2 -ISource Tests/FilterDSPTests.cpp -o /tmp/vifilter-dsp-tests
+/tmp/vifilter-dsp-tests
+```
 
-## Development roadmap
+## Code organization
 
-1. **Foundation** — AUv2 + Standalone, mono/stereo audio, automatable Output Gain, saved state, macOS CI.
-2. **Core DSP** — low-pass, high-pass, band-pass, cutoff, resonance; click-free automation and response tests.
-3. **Analog character** — saturation/drive and optional 2x/4x oversampling; aliasing and CPU checks.
-4. **Presets & behavior** — factory presets, user preset files, versioned parameter state and regression tests.
-5. **Final UI** — deliberate visual direction, custom controls, precise frequency-response visualization, accessibility and HiDPI.
+- `Source/FilterDSP.h` — portable TPT filter coefficients and realtime audio processing.
+- `Source/PluginProcessor.h/.cpp` — AU processor, smoothing, bus layout and state persistence.
+- `Tests/FilterDSPTests.cpp` — self-contained DSP regression tests.
+- `.github/workflows/build.yml` — macOS build and DSP tests on every `main` push.
 
-**Important:** The first commit provides source code and a CI build workflow; compilation in Logic must still be verified on macOS. Do not consider AU compatibility validated until the macOS build and Logic test pass.
+## Roadmap
 
-## Licensing
+1. Foundation — AUv2 and Standalone, saved state and gain automation (done).
+2. Core DSP — LP / HP / BP, cutoff, resonance, smooth automation and tests (this stage).
+3. Analog character — saturation, drive, 2x/4x oversampling; anti-aliasing and CPU checks.
+4. Presets and behavior — factory/user presets, session compatibility and regression tests.
+5. **Final UI** — detailed visual exploration and polish, then bespoke JUCE controls and response visualization. No visual implementation before this stage.
 
-JUCE licensing depends on the use and distribution of the final plugin. Review [JUCE licensing](https://juce.com/legal/) before publishing binaries or selling the plugin. A distribution license for Vi Filter has not been selected yet.
+**Validation:** C++ unit tests alone do not demonstrate AU compatibility. A successful macOS CI build and actual Logic Pro test are required before calling the plugin fully verified.
+
+## License
+
+JUCE licensing depends on final use and distribution. Review [JUCE licensing](https://juce.com/legal/) before releasing binaries or selling the plugin. Vi Filter distribution licensing is not yet decided.
