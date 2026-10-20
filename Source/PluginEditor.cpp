@@ -29,12 +29,12 @@ float clamp01 (float n) noexcept { return juce::jlimit (0.0f, 1.0f, n); }
 } // namespace
 
 const std::array<ViFilterEditor::Knob, 6> ViFilterEditor::knobLayout {{
-    { "cutoff",       "CUTOFF",      396.0f, 638.0f, 66.0f },
-    { "resonance",    "RESONANCE",   612.0f, 638.0f, 61.0f },
-    { "drive",        "DRIVE",       830.0f, 638.0f, 61.0f },
-    { "output_gain",  "OUTPUT GAIN", 1048.0f, 638.0f, 66.0f },
-    { "input_trim",   "INPUT TRIM",  158.0f, 701.0f, 41.0f },
-    { "mix",          "MIX",        1281.0f, 701.0f, 41.0f }
+    { "cutoff",      "CUTOFF",     293.0f, 446.0f, 45.0f },
+    { "resonance",   "RESONANCE",  430.0f, 446.0f, 43.0f },
+    { "drive",       "DRIVE",      566.0f, 446.0f, 43.0f },
+    { "output_gain", "OUTPUT",     704.0f, 446.0f, 45.0f },
+    { "input_trim",  "INPUT TRIM", 105.0f, 472.0f, 30.0f },
+    { "mix",         "MIX",        900.0f, 472.0f, 30.0f }
 }};
 
 ViFilterEditor::ViFilterEditor (ViFilterProcessor& owner)
@@ -58,8 +58,8 @@ ViFilterEditor::ViFilterEditor (ViFilterProcessor& owner)
 
     setOpaque (true);
     setResizable (true, true);
-    setResizeLimits (1100, 650, 2200, 1300);
-    setSize (1440, 820);
+    setResizeLimits (880, 493, 1120, 627);
+    setSize (980, 549);
     processor.getStateInformation (snapshotA);
     snapshotB = snapshotA;
     formatPresetName();
@@ -74,17 +74,19 @@ ViFilterEditor::~ViFilterEditor()
 
 void ViFilterEditor::resized()
 {
-    saveName.setBounds (juce::roundToInt (525.0f * scaleX()),
-                        juce::roundToInt (371.0f * scaleY()),
-                        juce::roundToInt (390.0f * scaleX()),
-                        juce::roundToInt (37.0f * scaleY()));
+    const auto scale = contentScale();
+    saveName.setBounds (juce::roundToInt (insetX() + 342.0f * scale),
+                        juce::roundToInt (insetY() + 275.0f * scale),
+                        juce::roundToInt (318.0f * scale),
+                        juce::roundToInt (34.0f * scale));
 }
 
 void ViFilterEditor::paint (juce::Graphics& g)
 {
     g.fillAll (juce::Colour (0xff090a0b));
     juce::Graphics::ScopedSaveState state (g);
-    g.addTransform (juce::AffineTransform::scale (scaleX(), scaleY()));
+    g.addTransform (juce::AffineTransform::scale (contentScale())
+                      .translated (insetX(), insetY()));
     paintPanel (g);
     paintHeader (g);
     paintResponse (g);
@@ -95,39 +97,30 @@ void ViFilterEditor::paint (juce::Graphics& g)
 
 void ViFilterEditor::paintPanel (juce::Graphics& g)
 {
-    juce::Rectangle<float> panel (19, 18, 1402, 784);
-    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff1b1c1e), 50, 20,
-                                             juce::Colour (0xff090a0b), 1400, 800, false));
-    g.fillRoundedRectangle (panel, 13.0f);
+    const juce::Rectangle<float> body (9, 8, 982, 544);
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff1d1e20), 25, 12,
+                                             juce::Colour (0xff090a0c), 981, 550, false));
+    g.fillRoundedRectangle (body, 11.0f);
+    g.setColour (juce::Colour (0xff454649));
+    g.drawRoundedRectangle (body.reduced (0.5f), 11.0f, 0.9f);
 
-    g.setColour (juce::Colour (0xff414244));
-    g.drawRoundedRectangle (panel.reduced (0.6f), 13.0f, 1.0f);
-    g.setColour (juce::Colour (0xff080808));
-    g.drawRoundedRectangle (panel.reduced (2.0f), 11.0f, 1.0f);
-
-    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff202124), 40, 30,
-                                             juce::Colour (0xff111214), 1400, 95, false));
-    g.fillRoundedRectangle (juce::Rectangle<float> (21, 20, 1398, 72), 12.0f);
-    g.setColour (juce::Colour (0xff3c3d3f));
-    g.drawHorizontalLine (92, 21.0f, 1418.0f);
-    g.setColour (juce::Colour (0xff070808));
-    g.drawHorizontalLine (94, 22.0f, 1417.0f);
-
-    g.setColour (juce::Colour (0xff090a0b));
-    g.fillRoundedRectangle (juce::Rectangle<float> (39, 109, 1362, 350), 13.0f);
-    g.setColour (juce::Colour (0xff3d3e40));
-    g.drawRoundedRectangle (juce::Rectangle<float> (40, 109, 1360, 347), 13.0f, 1.0f);
-    g.setColour (juce::Colour (0xff1b1c1f));
-    g.drawRoundedRectangle (juce::Rectangle<float> (43, 112, 1354, 341), 11.0f, 1.0f);
-
-    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff18191b), 160, 500,
-                                             juce::Colour (0xff0d0e10), 1300, 795, false));
-    g.fillRect (juce::Rectangle<float> (21, 475, 1398, 314));
-    g.setColour (juce::Colour (0xff292a2c));
-    g.drawHorizontalLine (478, 40.0f, 1400.0f);
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff252629), 12, 12,
+                                             juce::Colour (0xff111214), 988, 71, false));
+    g.fillRoundedRectangle (juce::Rectangle<float> (11, 10, 978, 62), 9.0f);
     g.setColour (juce::Colour (0xff3b3c3e));
-    g.drawVerticalLine (277, 640.0f, 762.0f);
-    g.drawVerticalLine (1169, 640.0f, 762.0f);
+    g.drawHorizontalLine (72, 11.0f, 989.0f);
+
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff0d0e10), 160, 85,
+                                             juce::Colour (0xff070809), 800, 300, false));
+    g.fillRoundedRectangle (juce::Rectangle<float> (19, 82, 962, 243), 9.0f);
+    g.setColour (juce::Colour (0xff393a3d));
+    g.drawRoundedRectangle (juce::Rectangle<float> (19.5f, 82.5f, 961, 242), 9.0f, 0.9f);
+
+    g.setColour (juce::Colour (0xff36373a));
+    g.drawHorizontalLine (335, 19.0f, 981.0f);
+    g.setColour (juce::Colour (0xff262729));
+    g.drawVerticalLine (202, 413.0f, 535.0f);
+    g.drawVerticalLine (800, 413.0f, 535.0f);
 }
 
 void ViFilterEditor::paintButton (juce::Graphics& g, juce::Rectangle<float> area,
@@ -154,56 +147,52 @@ void ViFilterEditor::paintButton (juce::Graphics& g, juce::Rectangle<float> area
 
 void ViFilterEditor::paintHeader (juce::Graphics& g)
 {
-    // Abstract waveform mark, using only anti-aliased JUCE paths.
     juce::Path mark;
-    mark.startNewSubPath (52, 59);
-    mark.cubicTo (61, 59, 61, 40, 69, 40);
-    mark.cubicTo (76, 40, 76, 73, 82, 73);
-    mark.cubicTo (88, 73, 91, 54, 99, 58);
+    mark.startNewSubPath (28, 43);
+    mark.cubicTo (37, 43, 36, 26, 43, 26);
+    mark.cubicTo (50, 26, 50, 57, 57, 57);
+    mark.cubicTo (63, 57, 65, 42, 74, 42);
     g.setColour (juce::Colour (ink));
-    g.strokePath (mark, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved,
-                                             juce::PathStrokeType::rounded));
-    g.setColour (juce::Colour (ink));
-    g.setFont (vi::typography::font (31.0f, vi::typography::Weight::light));
-    g.drawText ("Vi Filter", juce::Rectangle<int> (108, 32, 250, 48),
+    g.strokePath (mark, juce::PathStrokeType (1.8f,
+                      juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    g.setFont (vi::typography::font (26.0f, vi::typography::Weight::light));
+    g.drawText ("Vi Filter", juce::Rectangle<int> (83, 21, 188, 38),
                 juce::Justification::centredLeft, false);
 
-    paintButton (g, { 525, 34, 45, 45 }, "<", false, 20);
-    paintButton (g, { 572, 34, 291, 45 }, "", false);
-    label (g, displayedPreset, 590, 35, 248, 43, 17, juce::Colour (ink),
+    paintButton (g, { 289, 25, 32, 33 }, "<", false, 14);
+    paintButton (g, { 325, 25, 201, 33 }, "", false);
+    label (g, displayedPreset, 339, 27, 155, 28, 14, juce::Colour (ink),
            juce::Justification::centredLeft, vi::typography::Weight::medium);
     g.setColour (juce::Colour (muted));
-    g.drawLine (837, 52, 845, 60, 1.5f);
-    g.drawLine (845, 60, 853, 52, 1.5f);
-    paintButton (g, { 865, 34, 45, 45 }, ">", false, 20);
-    paintButton (g, { 938, 34, 45, 45 }, "A", comparingA, 14);
-    paintButton (g, { 985, 34, 45, 45 }, "B", ! comparingA, 14);
-    paintButton (g, { 1048, 34, 44, 45 }, "", false, 20);
-    paintButton (g, { 1095, 34, 44, 45 }, "", false, 20);
-    // White vector arcs instead of host-font-dependent Unicode arrows.
-    juce::Path undo, redo;
-    undo.startNewSubPath (1080, 61);
-    undo.cubicTo (1082, 47, 1063, 43, 1061, 55);
-    undo.lineTo (1061, 62);
-    redo.startNewSubPath (1107, 61);
-    redo.cubicTo (1105, 47, 1124, 43, 1126, 55);
-    redo.lineTo (1126, 62);
-    g.setColour (juce::Colour (ink));
-    g.strokePath (undo, juce::PathStrokeType (1.7f));
-    g.strokePath (redo, juce::PathStrokeType (1.7f));
-    g.drawLine (1057, 57, 1061, 62, 1.7f);
-    g.drawLine (1065, 57, 1061, 62, 1.7f);
-    g.drawLine (1122, 57, 1126, 62, 1.7f);
-    g.drawLine (1130, 57, 1126, 62, 1.7f);
+    g.drawLine (509, 38, 515, 43, 1.4f);
+    g.drawLine (515, 43, 521, 38, 1.4f);
+    paintButton (g, { 530, 25, 32, 33 }, ">", false, 14);
 
-    label (g, "OS", 1157, 41, 36, 30, 12, juce::Colour (muted));
+    paintButton (g, { 579, 25, 33, 33 }, "A", comparingA, 13);
+    paintButton (g, { 615, 25, 33, 33 }, "B", ! comparingA, 13);
+    paintButton (g, { 664, 25, 34, 33 }, "", false);
+    paintButton (g, { 701, 25, 34, 33 }, "", false);
+    juce::Path undo, redo;
+    undo.startNewSubPath (688, 47);
+    undo.cubicTo (688, 34, 671, 34, 672, 44);
+    undo.lineTo (672, 48);
+    redo.startNewSubPath (711, 47);
+    redo.cubicTo (711, 34, 728, 34, 727, 44);
+    redo.lineTo (727, 48);
+    g.setColour (juce::Colour (ink));
+    g.strokePath (undo, juce::PathStrokeType (1.5f));
+    g.strokePath (redo, juce::PathStrokeType (1.5f));
+    g.drawLine (668, 44, 672, 48, 1.5f); g.drawLine (676, 44, 672, 48, 1.5f);
+    g.drawLine (723, 44, 727, 48, 1.5f); g.drawLine (731, 44, 727, 48, 1.5f);
+
+    label (g, "OS", 752, 31, 24, 21, 11.0f, juce::Colour (muted));
     const auto os = juce::roundToInt (currentValue ("oversampling"));
     for (int i = 0; i < 3; ++i)
-        paintButton (g, { 1200.0f + 62.0f * i, 34.0f, 60, 45 },
-                     juce::String (1 << i) + "x", os == i, 13);
+        paintButton (g, { 785.0f + 65.0f * i, 25, 61, 33 },
+                     juce::String (1 << i) + "x", os == i, 12.5f);
 
     if (feedbackTicks > 0 && feedback.isNotEmpty())
-        label (g, feedback, 357, 57, 160, 18, 11, juce::Colour (muted));
+        label (g, feedback, 276, 55, 260, 15, 10, juce::Colour (muted));
 }
 
 float ViFilterEditor::currentValue (const char* id) const noexcept
@@ -232,13 +221,12 @@ float ViFilterEditor::cutoffToX (float cutoff) const noexcept
 {
     const auto normalized = std::log (juce::jlimit (20.0f, 20000.0f, cutoff) / 20.0f)
                           / std::log (1000.0f);
-    return 111.0f + 1111.0f * normalized;
+    return 75.0f + 775.0f * normalized;
 }
 
 float ViFilterEditor::xToCutoff (float x) const noexcept
 {
-    const auto position = clamp01 ((x - 111.0f) / 1111.0f);
-    return 20.0f * std::pow (1000.0f, position);
+    return 20.0f * std::pow (1000.0f, clamp01 ((x - 75.0f) / 775.0f));
 }
 
 float ViFilterEditor::responseDb (double frequency) const noexcept
@@ -256,140 +244,122 @@ float ViFilterEditor::frequencyY (double frequency) const noexcept
     if (linearScale)
     {
         const auto amplitude = std::pow (10.0f, db / 20.0f);
-        return 406.0f - 263.0f * clamp01 (amplitude / 4.0f);
+        return 281.0f - 167.0f * clamp01 (amplitude / 4.0f);
     }
-    return 143.0f + (24.0f - db) * 263.0f / 48.0f;
+    return 114.0f + (24.0f - db) * 167.0f / 48.0f;
 }
 
 void ViFilterEditor::paintResponse (juce::Graphics& g)
 {
-    constexpr float left = 111.0f, top = 143.0f;
-    constexpr float right = 1222.0f, bottom = 406.0f;
-    // Low-contrast logarithmic divisions; no fake spectrum data is painted.
-    const std::array<double, 10> frequencies {{ 20, 50, 100, 200, 500, 1000,
-                                                  2000, 5000, 10000, 20000 }};
+    constexpr float left = 75.0f, top = 114.0f;
+    constexpr float right = 850.0f, bottom = 281.0f;
+    const std::array<double, 10> frequencies {{ 20, 50, 100, 200, 500,
+                                                  1000, 2000, 5000, 10000, 20000 }};
     const std::array<const char*, 10> names {{ "20", "50", "100", "200", "500",
                                                "1k", "2k", "5k", "10k", "20k" }};
-    g.setColour (juce::Colour (0xff242527));
-    for (int decade = 1; decade <= 4; ++decade)
-    {
-        const auto base = std::pow (10.0, decade);
-        for (int m = 2; m < 10; ++m)
-        {
-            const auto f = base * m;
-            if (f > 20000 || f < 20)
-                continue;
-            const auto x = cutoffToX (static_cast<float> (f));
-            g.drawVerticalLine (juce::roundToInt (x), top, bottom);
-        }
-    }
+
+    // Restrained grid; keep the response readable on a 14-inch MacBook.
     for (size_t i = 0; i < frequencies.size(); ++i)
     {
         const auto x = cutoffToX (static_cast<float> (frequencies[i]));
-        g.setColour (juce::Colour (0xff353639));
+        g.setColour (juce::Colour (0xff2d2e30));
         g.drawVerticalLine (juce::roundToInt (x), top, bottom);
-        g.setColour (juce::Colour (0xff7d7f83));
-        g.drawLine (x, bottom, x, bottom + 7.0f, 1.0f);
-        label (g, names[i], x - 25.0f, 414, 50, 19, 13.0f, juce::Colour (muted),
+        label (g, names[i], x - 19, 286, 38, 20, 11.5f, juce::Colour (muted),
                juce::Justification::centred, vi::typography::Weight::medium);
     }
-    label (g, "Hz", 1232, 414, 30, 18, 12, juce::Colour (muted));
-    for (int n = -24; n <= 24; n += 12)
+    label (g, "Hz", 849, 288, 22, 18, 10.5f, juce::Colour (muted));
+
+    for (int db : { -24, -12, 0, 12, 24 })
     {
-        const auto y = top + (24 - n) * (bottom - top) / 48.0f;
-        g.setColour (juce::Colour (n == 0 ? 0xff414346 : 0xff303133));
+        const auto y = top + (24 - db) * (bottom - top) / 48.0f;
+        g.setColour (juce::Colour (db == 0 ? 0xff414346 : 0xff292a2c));
         g.drawLine (left, y, right, y, 0.8f);
-        label (g, (n > 0 ? "+" : "") + juce::String (n), 56, y - 9, 45, 18, 13.0f,
+        label (g, (db > 0 ? "+" : "") + juce::String (db), 26, y - 9, 38, 19, 11.0f,
                juce::Colour (muted), juce::Justification::centredRight,
                vi::typography::Weight::medium);
     }
-    label (g, "dB", 62, 269, 31, 18, 12, juce::Colour (muted));
-    g.setColour (juce::Colour (0xff939497));
-    g.drawLine (left, top, left, bottom, 1.0f);
-    g.drawLine (left, bottom, right, bottom, 1.0f);
+    g.setColour (juce::Colour (0xff75777a));
+    g.drawLine (left, top, left, bottom, 0.75f);
+    g.drawLine (left, bottom, right, bottom, 0.75f);
 
-    // An actual 2048 point output FFT, updated on the message thread.
+    {
+    juce::Graphics::ScopedSaveState clip (g);
+    g.reduceClipRegion (juce::Rectangle<int> (75, 114, 775, 168));
     if (showSpectrum)
     {
-        juce::Graphics::ScopedSaveState clip (g);
-        g.reduceClipRegion (juce::Rectangle<int> (111, 143, 1111, 263));
         juce::Path trace;
         const auto rate = std::max (processor.getSampleRate(), 44100.0);
-        for (int i = 0; i < 340; ++i)
+        for (int i = 0; i < 260; ++i)
         {
-            const auto x = left + (right - left) * i / 339.0f;
+            const auto x = left + (right - left) * i / 259.0f;
             const auto f = xToCutoff (x);
             const auto bin = juce::jlimit (1, fftSize / 2 - 1,
-                    juce::roundToInt (f / rate * fftSize));
+                                      juce::roundToInt (f / rate * fftSize));
             const auto amplitude = std::max (1.0e-6f, spectrum[static_cast<size_t> (bin)]);
             const auto db = 20.0f * std::log10 (amplitude) - 8.0f;
             const auto y = juce::jlimit (top, bottom,
-                                         top + (12.0f - db) * (bottom - top) / 60.0f);
+                                        top + (12.0f - db) * (bottom - top) / 60.0f);
             if (i == 0) trace.startNewSubPath (x, y);
             else trace.lineTo (x, y);
         }
-        g.setColour (juce::Colour (0xff747679).withAlpha (0.50f));
-        g.strokePath (trace, juce::PathStrokeType (1.3f));
-        auto shade = trace;
-        shade.lineTo (right, bottom);
-        shade.lineTo (left, bottom);
-        shade.closeSubPath();
-        g.setGradientFill (juce::ColourGradient (juce::Colour (0xffd8dadd).withAlpha (0.10f),
-                                                 400, top, juce::Colours::transparentBlack,
-                                                 400, bottom, false));
-        g.fillPath (shade);
-    }
-
-    juce::Path response;
-    constexpr int count = 360;
-    for (int i = 0; i < count; ++i)
-    {
-        const auto x = left + (right - left) * i / (count - 1.0f);
-        const auto y = frequencyY (xToCutoff (x));
-        if (i == 0) response.startNewSubPath (x, y);
-        else response.lineTo (x, y);
-    }
-    {
-        juce::Graphics::ScopedSaveState clip (g);
-        g.reduceClipRegion (juce::Rectangle<int> (111, 143, 1111, 263));
-        auto area = response;
+        g.setColour (juce::Colour (0xff898b8e).withAlpha (0.58f));
+        g.strokePath (trace, juce::PathStrokeType (1.2f));
+        auto area = trace;
         area.lineTo (right, bottom);
         area.lineTo (left, bottom);
         area.closeSubPath();
-        g.setGradientFill (juce::ColourGradient (juce::Colour (0xffd8dbde).withAlpha (0.14f),
-                                                 left, 180, juce::Colours::transparentBlack,
-                                                 left, bottom, false));
+        g.setGradientFill (juce::ColourGradient (
+            juce::Colour (0xffd8dadc).withAlpha (0.10f), left, top,
+            juce::Colours::transparentBlack, left, bottom, false));
         g.fillPath (area);
-        g.setColour (juce::Colours::white.withAlpha (0.06f));
-        g.strokePath (response, juce::PathStrokeType (8.0f, juce::PathStrokeType::curved));
-        g.setColour (juce::Colours::white.withAlpha (0.16f));
-        g.strokePath (response, juce::PathStrokeType (4.0f, juce::PathStrokeType::curved));
-        g.setColour (juce::Colour (0xffe7e8e9));
-        g.strokePath (response, juce::PathStrokeType (1.8f, juce::PathStrokeType::curved));
     }
-    const auto nodeX = cutoffToX (currentValue ("cutoff"));
-    const auto nodeY = frequencyY (currentValue ("cutoff"));
-    g.setColour (juce::Colours::white.withAlpha (0.15f));
-    g.fillEllipse (nodeX - 15.0f, nodeY - 15.0f, 30.0f, 30.0f);
-    g.setColour (juce::Colour (0xffdedfe1));
-    g.drawEllipse (nodeX - 9.0f, nodeY - 9.0f, 18.0f, 18.0f, 2.1f);
-    g.setColour (juce::Colour (0xff111214));
-    g.fillEllipse (nodeX - 6.0f, nodeY - 6.0f, 12.0f, 12.0f);
 
-    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff222326), 1250, 165,
-                                             juce::Colour (0xff0d0e10), 1380, 315, false));
-    g.fillRoundedRectangle (juce::Rectangle<float> (1250, 166, 129, 122), 9.0f);
-    g.setColour (juce::Colour (hairline));
-    g.drawRoundedRectangle (juce::Rectangle<float> (1250, 166, 129, 122), 9.0f, 1.0f);
-    label (g, "ANALYZER", 1260, 181, 74, 21, 10, juce::Colour (ink),
+    juce::Path curve;
+    for (int i = 0; i < 288; ++i)
+    {
+        const auto x = left + (right - left) * i / 287.0f;
+        const auto y = frequencyY (xToCutoff (x));
+        if (i == 0) curve.startNewSubPath (x, y);
+        else curve.lineTo (x, y);
+    }
+    auto fill = curve;
+    fill.lineTo (right, bottom);
+    fill.lineTo (left, bottom);
+    fill.closeSubPath();
+    g.setGradientFill (juce::ColourGradient (
+        juce::Colour (0xffe6e7e8).withAlpha (0.12f), left, top,
+        juce::Colours::transparentBlack, left, bottom, false));
+    g.fillPath (fill);
+    g.setColour (juce::Colours::white.withAlpha (0.13f));
+    g.strokePath (curve, juce::PathStrokeType (4.0f));
+    g.setColour (juce::Colour (0xffe6e8e9));
+    g.strokePath (curve, juce::PathStrokeType (1.6f));
+
+    const auto cx = cutoffToX (currentValue ("cutoff"));
+    const auto cy = frequencyY (currentValue ("cutoff"));
+    g.setColour (juce::Colours::white.withAlpha (0.18f));
+    g.fillEllipse (cx - 11, cy - 11, 22, 22);
+    g.setColour (juce::Colour (0xffededee));
+    g.drawEllipse (cx - 6.5f, cy - 6.5f, 13, 13, 1.6f);
+    g.setColour (juce::Colour (0xff0e0f10));
+    g.fillEllipse (cx - 4, cy - 4, 8, 8);
+
+    } // scoped response/spectrum clipping
+
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff242528), 870, 110,
+                                             juce::Colour (0xff101113), 972, 230, false));
+    g.fillRoundedRectangle ({ 868, 111, 102, 116 }, 6.0f);
+    g.setColour (juce::Colour (0xff424347));
+    g.drawRoundedRectangle ({ 868, 111, 102, 116 }, 6.0f, 0.75f);
+    label (g, "ANALYZER", 875, 119, 76, 20, 10.0f, juce::Colour (muted),
            juce::Justification::centredLeft);
-    paintButton (g, { 1336, 180, 33, 22 }, "", showSpectrum, 13);
-    g.setColour (juce::Colour (showSpectrum ? 0xffeeeeef : 0xff77797b));
-    g.fillEllipse (showSpectrum ? 1351.0f : 1339.0f, 185.0f, 12.0f, 12.0f);
-    label (g, "SCALE", 1260, 216, 100, 20, 11, juce::Colour (muted),
+    paintButton (g, { 938, 141, 25, 23 }, "", showSpectrum, 11.0f);
+    g.setColour (juce::Colour (showSpectrum ? 0xffeeeeef : 0xff808286));
+    g.fillEllipse (showSpectrum ? 951.0f : 941.0f, 147.0f, 11, 11);
+    label (g, "SCALE", 876, 169, 78, 17, 10.0f, juce::Colour (muted),
            juce::Justification::centredLeft);
-    paintButton (g, { 1260, 242, 51, 32 }, "dB", ! linearScale, 13);
-    paintButton (g, { 1315, 242, 53, 32 }, "Lin", linearScale, 13);
+    paintButton (g, { 876, 190, 42, 27 }, "dB", ! linearScale, 11.0f);
+    paintButton (g, { 921, 190, 42, 27 }, "Lin", linearScale, 11.0f);
 }
 
 juce::String ViFilterEditor::formatKnobValue (const Knob& k) const
@@ -407,9 +377,9 @@ juce::String ViFilterEditor::formatKnobValue (const Knob& k) const
 
 void ViFilterEditor::paintKnob (juce::Graphics& g, const Knob& k)
 {
-    const auto large = k.radius > 50;
-    label (g, k.title, k.x - 105, large ? 501.0f : 626.0f,
-           210, 24, large ? 13.5f : 12.5f, juce::Colour (ink),
+    const auto large = k.radius > 35;
+    label (g, k.title, k.x - 78, large ? 347.0f : 418.0f,
+           156, 23, large ? 12.5f : 11.5f, juce::Colour (ink),
            juce::Justification::centred, vi::typography::Weight::regular);
     const auto r = k.radius;
     const auto cx = k.x, cy = k.y;
@@ -490,26 +460,26 @@ void ViFilterEditor::paintKnob (juce::Graphics& g, const Knob& k)
                 cy - std::cos (angle) * capR * 0.30f,
                 cx + std::sin (angle) * capR * 0.83f,
                 cy - std::cos (angle) * capR * 0.83f, large ? 2.8f : 2.0f);
-    label (g, formatKnobValue (k), cx - 100, large ? 742.0f : 763.0f,
-           200, 25, large ? 20.0f : 17.0f, juce::Colour (ink),
+    label (g, formatKnobValue (k), cx - 72, large ? 516.0f : 518.0f,
+           144, 22, large ? 16.0f : 13.5f, juce::Colour (ink),
            juce::Justification::centred, vi::typography::Weight::medium);
 }
 
 void ViFilterEditor::paintControls (juce::Graphics& g)
 {
-    label (g, "FILTER MODE", 49, 499, 230, 24, 13, juce::Colour (ink));
+    label (g, "FILTER MODE", 23, 349, 164, 22, 11.5f, juce::Colour (ink));
     const auto mode = juce::roundToInt (currentValue ("filter_mode"));
     const std::array<const char*, 3> modes {{ "LP", "HP", "BP" }};
     for (int i = 0; i < 3; ++i)
-        paintButton (g, { 49.0f + 76.0f * i, 548.0f, 73.0f, 51.0f },
-                     modes[static_cast<size_t> (i)], mode == i, 15);
+        paintButton (g, { 26.0f + 54.0f * i, 378.0f, 51, 34 },
+                     modes[static_cast<size_t> (i)], mode == i, 12.0f);
 
-    label (g, "ANALOG CHARACTER", 1167, 499, 233, 24, 13, juce::Colour (ink));
+    label (g, "ANALOG CHARACTER", 814, 349, 163, 22, 11.5f, juce::Colour (ink));
     const auto character = juce::roundToInt (currentValue ("analog_character"));
     const std::array<const char*, 3> characters {{ "Soft", "Tube", "Tape" }};
     for (int i = 0; i < 3; ++i)
-        paintButton (g, { 1172.0f + 74.0f * i, 548.0f, 71.0f, 51.0f },
-                     characters[static_cast<size_t> (i)], character == i, 14);
+        paintButton (g, { 813.0f + 55.0f * i, 378.0f, 52, 34 },
+                     characters[static_cast<size_t> (i)], character == i, 11.5f);
 
     for (const auto& knob : knobLayout)
         paintKnob (g, knob);
@@ -517,22 +487,23 @@ void ViFilterEditor::paintControls (juce::Graphics& g)
 
 void ViFilterEditor::paintSaveOverlay (juce::Graphics& g)
 {
-    g.setColour (juce::Colours::black.withAlpha (0.66f));
-    g.fillRoundedRectangle ({ 472, 299, 494, 186 }, 12.0f);
-    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff303134), 474, 302,
-                                             juce::Colour (0xff111214), 955, 485, false));
-    g.fillRoundedRectangle ({ 479, 306, 480, 167 }, 10.0f);
-    g.setColour (juce::Colour (0xff7a7c80));
-    g.drawRoundedRectangle ({ 479, 306, 480, 167 }, 10.0f, 1.0f);
-    label (g, "SAVE PRESET", 525, 326, 380, 29, 16, juce::Colour (ink),
+    g.setColour (juce::Colours::black.withAlpha (0.72f));
+    g.fillRoundedRectangle ({ 291, 199, 419, 179 }, 11.0f);
+    g.setGradientFill (juce::ColourGradient (juce::Colour (0xff292a2c), 302, 211,
+                                             juce::Colour (0xff111214), 701, 377, false));
+    g.fillRoundedRectangle ({ 300, 207, 400, 164 }, 9.0f);
+    g.setColour (juce::Colour (0xff636568));
+    g.drawRoundedRectangle ({ 300, 207, 400, 164 }, 9.0f, 1.0f);
+    label (g, "SAVE PRESET", 342, 224, 316, 24, 15.0f, juce::Colour (ink),
            juce::Justification::centredLeft);
-    paintButton (g, { 719, 420, 92, 37 }, "SAVE", true, 13);
-    paintButton (g, { 820, 420, 94, 37 }, "CANCEL", false, 12);
+    paintButton (g, { 482, 327, 75, 30 }, "SAVE", true, 12);
+    paintButton (g, { 566, 327, 91, 30 }, "CANCEL", false, 12);
 }
 
 juce::Point<float> ViFilterEditor::point (const juce::MouseEvent& e) const noexcept
 {
-    return { e.position.x / scaleX(), e.position.y / scaleY() };
+    return { (e.position.x - insetX()) / contentScale(),
+             (e.position.y - insetY()) / contentScale() };
 }
 
 int ViFilterEditor::knobAt (juce::Point<float> p) const noexcept
@@ -555,22 +526,24 @@ void ViFilterEditor::mouseDown (const juce::MouseEvent& e)
     };
     if (saving)
     {
-        if (hit (719, 420, 92, 37)) commitSave();
-        else if (hit (820, 420, 94, 37))
+        if (hit (482, 327, 75, 30)) commitSave();
+        else if (hit (566, 327, 91, 30))
         {
-            saving = false; saveName.setVisible (false); repaint();
+            saving = false;
+            saveName.setVisible (false);
+            repaint();
         }
         return;
     }
-    if (hit (572, 34, 291, 45))
+    if (hit (325, 25, 201, 33))
     {
         openPresetMenu();
         return;
     }
-    if (hit (525, 34, 45, 45) || hit (865, 34, 45, 45))
+    if (hit (289, 25, 32, 33) || hit (530, 25, 32, 33))
     {
         const auto current = processor.getCurrentProgram();
-        const auto offset = hit (525, 34, 45, 45) ? -1 : 1;
+        const auto offset = hit (289, 25, 32, 33) ? -1 : 1;
         const auto count = processor.getNumPrograms() - 1;
         const auto next = ((current <= 0 ? 1 : current) - 1 + offset + count) % count + 1;
         processor.setCurrentProgram (next);
@@ -578,28 +551,28 @@ void ViFilterEditor::mouseDown (const juce::MouseEvent& e)
         repaint();
         return;
     }
-    if (hit (938, 34, 45, 45)) { switchAB (true); return; }
-    if (hit (985, 34, 45, 45)) { switchAB (false); return; }
-    if (hit (1048, 34, 44, 45)) { processor.undoManager().undo(); repaint(); return; }
-    if (hit (1095, 34, 44, 45)) { processor.undoManager().redo(); repaint(); return; }
+    if (hit (579, 25, 33, 33)) { switchAB (true); return; }
+    if (hit (615, 25, 33, 33)) { switchAB (false); return; }
+    if (hit (664, 25, 34, 33)) { processor.undoManager().undo(); repaint(); return; }
+    if (hit (701, 25, 34, 33)) { processor.undoManager().redo(); repaint(); return; }
     for (int i = 0; i < 3; ++i)
     {
-        if (hit (1200.0f + 62 * i, 34, 60, 45))
+        if (hit (785.0f + 65 * i, 25, 61, 33))
         {
             setParameter ("oversampling", static_cast<float> (i)); repaint(); return;
         }
-        if (hit (49.0f + 76 * i, 548, 73, 51))
+        if (hit (26.0f + 54 * i, 378, 51, 34))
         {
             setParameter ("filter_mode", static_cast<float> (i)); repaint(); return;
         }
-        if (hit (1172.0f + 74 * i, 548, 71, 51))
+        if (hit (813.0f + 55 * i, 378, 52, 34))
         {
             setParameter ("analog_character", static_cast<float> (i)); repaint(); return;
         }
     }
-    if (hit (1336, 180, 33, 22)) { showSpectrum = ! showSpectrum; repaint(); return; }
-    if (hit (1260, 242, 51, 32)) { linearScale = false; repaint(); return; }
-    if (hit (1315, 242, 53, 32)) { linearScale = true; repaint(); return; }
+    if (hit (938, 141, 25, 23)) { showSpectrum = ! showSpectrum; repaint(); return; }
+    if (hit (876, 190, 42, 27)) { linearScale = false; repaint(); return; }
+    if (hit (921, 190, 42, 27)) { linearScale = true; repaint(); return; }
 
     activeKnob = knobAt (p);
     if (activeKnob >= 0)
@@ -613,7 +586,7 @@ void ViFilterEditor::mouseDown (const juce::MouseEvent& e)
         }
         return;
     }
-    if (hit (111, 143, 1111, 263))
+    if (hit (75, 114, 775, 167))
     {
         draggingResponse = true;
         activeParameter = getParameter ("cutoff");
@@ -759,9 +732,9 @@ void ViFilterEditor::openPresetMenu()
     menu.showMenuAsync (juce::PopupMenu::Options()
                         .withTargetComponent (this)
                         .withTargetScreenArea (juce::Rectangle<int> (
-                            getScreenPosition().x + juce::roundToInt (572 * scaleX()),
-                            getScreenPosition().y + juce::roundToInt (79 * scaleY()),
-                            juce::roundToInt (291 * scaleX()), 1)),
+                            getScreenPosition().x + juce::roundToInt (insetX() + 325 * contentScale()),
+                            getScreenPosition().y + juce::roundToInt (insetY() + 58 * contentScale()),
+                            juce::roundToInt (201 * contentScale()), 1)),
                         [safe = juce::Component::SafePointer<ViFilterEditor> (this)] (int result)
                         {
                             if (safe != nullptr)

@@ -26,8 +26,8 @@ public:
     void refreshAnalyzerNow();
 
 private:
-    static constexpr float designWidth = 1440.0f;
-    static constexpr float designHeight = 820.0f;
+    static constexpr float designWidth = 1000.0f;
+    static constexpr float designHeight = 560.0f;
     static constexpr int fftOrder = 11;
     static constexpr int fftSize = 1 << fftOrder;
 
@@ -50,8 +50,15 @@ private:
     void paintSaveOverlay (juce::Graphics&);
 
     juce::Point<float> point (const juce::MouseEvent&) const noexcept;
-    float scaleX() const noexcept { return getWidth() / designWidth; }
-    float scaleY() const noexcept { return getHeight() / designHeight; }
+    // Single uniform transform: no distortion of knobs, typography or drag gestures.
+    float contentScale() const noexcept
+    {
+        return std::min (getWidth() / designWidth, getHeight() / designHeight);
+    }
+    float insetX() const noexcept { return 0.5f * (getWidth() - designWidth * contentScale()); }
+    float insetY() const noexcept { return 0.5f * (getHeight() - designHeight * contentScale()); }
+    float scaleX() const noexcept { return contentScale(); }
+    float scaleY() const noexcept { return contentScale(); }
     float cutoffToX (float cutoff) const noexcept;
     float xToCutoff (float x) const noexcept;
     float frequencyY (double frequency) const noexcept;

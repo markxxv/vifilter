@@ -41,7 +41,7 @@ The font is close in style to DIN Next / DIN 2014 but is **not the proprietary M
 
 ## The visual interface
 
-The plugin now has its own **monochrome, vector-rendered editor** at 1440×820 reference size, scalable down to 1100×650. Graphite and black surfaces, silver highlights, engraved tick marks and six custom-drawn knobs are rendered with JUCE Graphics. **No raster/knob filmstrip dependencies** are required; Retina output remains sharp.
+The plugin now has a **compact, monochrome, vector-rendered editor** with a **980×549 default window**, an **880×493 minimum** and a **1120×627 maximum**. Its design grid is 1000×560. Graphics, knobs, typography and mouse hit targets use one uniform scale to avoid distortion; unused space is letterboxed when host resizing changes the aspect ratio. The analyzer remains on top with a narrower, cleaner logarithmic grid, while the six knobs and selectors fit into a single compact lower strip. Graphite and black surfaces, silver highlights, engraved tick marks and six custom-drawn knobs are rendered with JUCE Graphics. **No raster/knob filmstrip dependencies** are required; Retina output remains sharp.
 
 - Central frequency-response curve is derived mathematically from the existing TPT state-variable filter. Its draggable node controls Cutoff; the line includes Filter Mode, Resonance, Input Trim, Output Gain and Mix. A nonlinear saturation stage has no fixed linear transfer function and is not represented by this line.
 - The optional spectrum overlay is a **real 2048-point FFT** of the processed output, read from a preallocated SPSC FIFO on the message thread, not an animation or placeholder. Analyzer toggle and dB/linear graph mode are in the chart.

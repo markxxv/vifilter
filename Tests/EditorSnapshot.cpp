@@ -19,9 +19,11 @@ int main()
     }
 
     auto editor = std::unique_ptr<juce::AudioProcessorEditor> (processor.createEditor());
-    if (editor == nullptr || editor->getWidth() < 1000 || editor->getHeight() < 600)
+    // Compact default is deliberate: Logic adds a substantial host toolbar.
+    if (editor == nullptr || editor->getWidth() > 1000 || editor->getHeight() > 560
+        || editor->getWidth() < 880 || editor->getHeight() < 493)
     {
-        std::cerr << "Missing or undersized Vi Filter editor\n";
+        std::cerr << "Vi Filter must open in a compact, laptop-friendly size\n";
         return 1;
     }
 
@@ -62,9 +64,9 @@ int main()
     // JUCE_MODAL_LOOPS_PERMITTED may be disabled on some macOS/Xcode builds.
     static_cast<ViFilterEditor*> (editor.get())->refreshAnalyzerNow();
 
-    // Exercise both the intended desktop size and the minimum supported size.
-    for (const auto dimensions : { std::pair<int, int> { 1100, 650 },
-                                   std::pair<int, int> { 1440, 820 } })
+    // Exercise the minimum laptop size and the new 1000 x 560 design grid.
+    for (const auto dimensions : { std::pair<int, int> { 880, 493 },
+                                   std::pair<int, int> { 1000, 560 } })
     {
         editor->setSize (dimensions.first, dimensions.second);
         juce::Image image (juce::Image::ARGB, dimensions.first, dimensions.second, true);
@@ -72,7 +74,7 @@ int main()
         editor->paintEntireComponent (graphics, true);
 
         const auto target = juce::File::getCurrentWorkingDirectory().getChildFile (
-            dimensions.first == 1440 ? "ViFilter_UI_Preview.png" : "ViFilter_UI_Compact.png");
+            dimensions.first == 1000 ? "ViFilter_UI_Preview.png" : "ViFilter_UI_Compact.png");
         juce::PNGImageFormat png;
         auto stream = target.createOutputStream();
         if (stream == nullptr || ! png.writeImageToStream (image, *stream))
@@ -82,6 +84,6 @@ int main()
         }
         stream->flush();
     }
-    std::cout << "Editor rendered at 1100x650 and 1440x820\n";
+    std::cout << "Editor rendered at 880x493 and 1000x560\n";
     return 0;
 }
